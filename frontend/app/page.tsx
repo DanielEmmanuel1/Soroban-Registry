@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import ContractCard from '@/components/ContractCard';
 import ContractCardSkeleton from '@/components/ContractCardSkeleton';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
-import { Search, Package, CheckCircle, Users, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, Package, CheckCircle, Users, ArrowRight, Sparkles, Shield, GitBranch, Upload, Terminal, Github, MessageCircle, BookOpen, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +17,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { logEvent } = useAnalytics();
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['stats'],
@@ -37,6 +38,13 @@ export default function Home() {
       });
       router.push(`/contracts?query=${encodeURIComponent(searchQuery)}`);
     }
+  };
+
+  const handleCopyCode = async () => {
+    const code = `cargo install soroban-registry-cli\nsoroban-registry search token\nsoroban-registry install my-token-contract`;
+    await navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
   };
 
   useEffect(() => {
@@ -80,7 +88,7 @@ export default function Home() {
             <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight">
               Discover & Publish
               <br />
-              <span className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+              <span className="text-gradient">
                 Soroban Contracts
               </span>
             </h1>
@@ -164,6 +172,50 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Why Soroban Registry — Feature Cards */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            Why builders choose the <span className="text-gradient">Registry</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Everything you need to discover, verify, and integrate Soroban smart contracts.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="gradient-border-card p-8 card-hover">
+            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-6">
+              <Shield className="w-6 h-6 text-green-500" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Verified Contracts</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Every contract goes through verification. Source code validation, security scoring, and health monitoring ensure you&apos;re using battle-tested code.
+            </p>
+          </div>
+
+          <div className="gradient-border-card p-8 card-hover">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+              <GitBranch className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Dependency Graph</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Visualize the entire contract ecosystem. Understand dependencies, discover related contracts, and trace the impact of changes across the network.
+            </p>
+          </div>
+
+          <div className="gradient-border-card p-8 card-hover">
+            <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-6">
+              <Upload className="w-6 h-6 text-secondary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Easy Publishing</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Publish contracts in seconds via CLI or web interface. Add metadata, examples, and documentation to help others integrate your work.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Recent Contracts */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex items-center justify-between mb-8">
@@ -192,22 +244,167 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-            <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">No contracts published yet</p>
+          <div className="text-center py-12 rounded-2xl border border-border bg-card">
+            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No contracts published yet</p>
           </div>
         )}
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 mt-24" aria-label="Site footer">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex flex-col items-center gap-3 text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" aria-hidden="true" />
-              <span>Built for the Stellar Dev Community</span>
+      {/* Install & Learn — Code Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-6">
+              Install & start <span className="text-gradient">building</span>
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              Get up and running in minutes. Install the CLI, search the registry,
+              and integrate verified contracts into your Soroban project.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/contracts"
+                className="btn-glow inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium"
+              >
+                Browse Contracts
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/templates"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-border text-foreground hover:bg-accent font-medium transition-all"
+              >
+                View Templates
+              </Link>
             </div>
-            <p className="text-sm">Powered by Soroban Smart Contracts</p>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden border border-border bg-[#0d1117]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-mono">Terminal</span>
+              </div>
+              <button
+                onClick={handleCopyCode}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label={codeCopied ? 'Code copied' : 'Copy code'}
+              >
+                {codeCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {codeCopied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <div className="p-6 font-mono text-sm leading-relaxed">
+              <div className="text-gray-500 mb-1"># Install the CLI</div>
+              <div className="text-green-400 mb-4">$ cargo install soroban-registry-cli</div>
+              <div className="text-gray-500 mb-1"># Search for contracts</div>
+              <div className="text-green-400 mb-4">$ soroban-registry search token</div>
+              <div className="text-gray-500 mb-1"># Install a contract</div>
+              <div className="text-green-400">$ soroban-registry install my-token-contract</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Community / CTA Section */}
+      <section className="border-t border-border bg-accent/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Join the <span className="text-gradient">community</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+              Connect with developers building the future of DeFi on Stellar.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <a
+              href="https://github.com/stellar"
+              target="_blank"
+              rel="noreferrer"
+              className="gradient-border-card p-6 text-center card-hover group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-card flex items-center justify-center mx-auto mb-4 border border-border group-hover:border-primary/50 transition-colors">
+                <Github className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mb-1">GitHub</h3>
+              <p className="text-sm text-muted-foreground">Contribute to the codebase</p>
+            </a>
+
+            <a
+              href="https://discord.com/invite/stellardev"
+              target="_blank"
+              rel="noreferrer"
+              className="gradient-border-card p-6 text-center card-hover group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-card flex items-center justify-center mx-auto mb-4 border border-border group-hover:border-primary/50 transition-colors">
+                <MessageCircle className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mb-1">Discord</h3>
+              <p className="text-sm text-muted-foreground">Chat with developers</p>
+            </a>
+
+            <a
+              href="https://developers.stellar.org/docs/smart-contracts"
+              target="_blank"
+              rel="noreferrer"
+              className="gradient-border-card p-6 text-center card-hover group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-card flex items-center justify-center mx-auto mb-4 border border-border group-hover:border-primary/50 transition-colors">
+                <BookOpen className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mb-1">Documentation</h3>
+              <p className="text-sm text-muted-foreground">Read the Soroban docs</p>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card" aria-label="Site footer">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+            <div>
+              <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Registry</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link href="/contracts" className="text-muted-foreground hover:text-foreground transition-colors">Browse Contracts</Link></li>
+                <li><Link href="/templates" className="text-muted-foreground hover:text-foreground transition-colors">Templates</Link></li>
+                <li><Link href="/publish" className="text-muted-foreground hover:text-foreground transition-colors">Publish</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Explore</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link href="/graph" className="text-muted-foreground hover:text-foreground transition-colors">Dependency Graph</Link></li>
+                <li><Link href="/stats" className="text-muted-foreground hover:text-foreground transition-colors">Statistics</Link></li>
+                <li><Link href="/publishers" className="text-muted-foreground hover:text-foreground transition-colors">Publishers</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Developers</h4>
+              <ul className="space-y-3 text-sm">
+                <li><a href="https://developers.stellar.org/docs/smart-contracts" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">Soroban Docs</a></li>
+                <li><a href="https://stellar.org/soroban" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">About Soroban</a></li>
+                <li><a href="https://github.com/stellar" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">GitHub</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Community</h4>
+              <ul className="space-y-3 text-sm">
+                <li><a href="https://discord.com/invite/stellardev" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">Discord</a></li>
+                <li><a href="https://twitter.com/BuildOnStellar" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">Twitter</a></li>
+                <li><a href="https://stellar.org/community" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">Stellar Community</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Package className="w-4 h-4 text-primary" />
+              <span>Built for the Stellar Developer Community</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Powered by Soroban Smart Contracts</p>
           </div>
         </div>
       </footer>

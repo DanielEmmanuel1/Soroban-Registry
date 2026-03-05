@@ -69,9 +69,9 @@ export default function ReleaseNotesPanel({ contractId }: ReleaseNotesProps) {
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-3">
-        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+        <div className="h-6 bg-muted rounded w-1/3" />
+        <div className="h-4 bg-muted rounded w-2/3" />
+        <div className="h-4 bg-muted rounded w-1/2" />
       </div>
     );
   }
@@ -88,12 +88,12 @@ export default function ReleaseNotesPanel({ contractId }: ReleaseNotesProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-lg font-semibold text-foreground">
           Release Notes
         </h3>
         <button
           onClick={() => setShowGenerateForm(!showGenerateForm)}
-          className="px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          className="px-3 py-1.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           {showGenerateForm ? "Cancel" : "Generate Notes"}
         </button>
@@ -101,8 +101,8 @@ export default function ReleaseNotesPanel({ contractId }: ReleaseNotesProps) {
 
       {/* Generate form */}
       {showGenerateForm && (
-        <div className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-900/20 space-y-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="p-4 border border-primary/30 rounded-lg bg-primary/5 space-y-3">
+          <label className="block text-sm font-medium text-muted-foreground">
             Version (semver)
           </label>
           <input
@@ -110,7 +110,7 @@ export default function ReleaseNotesPanel({ contractId }: ReleaseNotesProps) {
             value={generateVersion}
             onChange={(e) => setGenerateVersion(e.target.value)}
             placeholder="e.g. 1.2.0"
-            className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
+            className="w-full px-3 py-2 rounded-md border border-border bg-card text-sm"
           />
           <button
             onClick={() => generateMutation.mutate(generateVersion)}
@@ -131,7 +131,7 @@ export default function ReleaseNotesPanel({ contractId }: ReleaseNotesProps) {
 
       {/* Release notes list */}
       {(!releaseNotes || releaseNotes.length === 0) && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           No release notes generated yet. Click &quot;Generate Notes&quot; to
           auto-generate from code diffs.
         </p>
@@ -196,11 +196,11 @@ function ReleaseNotesCard({
   const isDraft = notes.status === "draft";
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-border rounded-2xl overflow-hidden">
       {/* Card header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-accent">
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-gray-900 dark:text-gray-100">
+          <span className="font-semibold text-foreground">
             v{notes.version}
           </span>
           <StatusBadge status={notes.status} />
@@ -210,7 +210,7 @@ function ReleaseNotesCard({
             </span>
           )}
           {notes.previous_version && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-muted-foreground">
               (from v{notes.previous_version})
             </span>
           )}
@@ -220,7 +220,7 @@ function ReleaseNotesCard({
             <>
               <button
                 onClick={onStartEdit}
-                className="px-2.5 py-1 text-xs font-medium rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                className="px-2.5 py-1 text-xs font-medium rounded bg-accent text-muted-foreground hover:bg-muted transition-colors"
               >
                 Edit
               </button>
@@ -247,33 +247,33 @@ function ReleaseNotesCard({
               value={editText}
               onChange={(e) => onChangeEditText(e.target.value)}
               rows={16}
-              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono"
+              className="w-full px-3 py-2 rounded-md border border-border bg-card text-sm font-mono"
             />
             <div className="flex gap-2">
               <button
                 onClick={onSaveEdit}
                 disabled={isSaving}
-                className="px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {isSaving ? "Saving..." : "Save Draft"}
               </button>
               <button
                 onClick={onCancelEdit}
-                className="px-3 py-1.5 text-sm font-medium rounded-md bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                className="px-3 py-1.5 text-sm font-medium rounded-md bg-accent text-muted-foreground hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
             </div>
           </div>
         ) : (
-          <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-mono leading-relaxed">
+          <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono leading-relaxed">
             {notes.notes_text}
           </pre>
         )}
       </div>
 
       {/* Footer metadata */}
-      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex gap-4">
+      <div className="px-4 py-2 bg-accent border-t border-border text-xs text-muted-foreground flex gap-4">
         <span>Generated by: {notes.generated_by}</span>
         <span>Created: {new Date(notes.created_at).toLocaleDateString()}</span>
         {notes.published_at && (
@@ -317,7 +317,7 @@ function DiffSummaryBar({
   ).length;
 
   return (
-    <div className="flex flex-wrap gap-4 px-4 py-2 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+    <div className="flex flex-wrap gap-4 px-4 py-2 text-xs text-muted-foreground border-b border-border">
       <span>
         {diff.files_changed} file{diff.files_changed !== 1 ? "s" : ""} changed
       </span>

@@ -10,7 +10,7 @@ import Navbar from "@/components/Navbar";
 const SwaggerUI = dynamic(() => import("swagger-ui-react"), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center min-h-[400px] text-gray-500 dark:text-gray-400">
+    <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
       Loading API documentation...
     </div>
   ),
@@ -33,14 +33,14 @@ function ApiDocsContent() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+      <div className="border-b border-border bg-card px-4 py-3">
         <Link
           href={`/contracts/${id}`}
-          className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           ← Back to contract
         </Link>
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+        <h1 className="text-lg font-semibold text-foreground mt-1">
           API Documentation
           {version ? ` (v${version})` : ""}
         </h1>
@@ -48,7 +48,7 @@ function ApiDocsContent() {
       <div className="swagger-wrapper [&_.swagger-ui]:bg-transparent">
         <Suspense
           fallback={
-            <div className="flex items-center justify-center min-h-[400px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
               Loading OpenAPI spec...
             </div>
           }

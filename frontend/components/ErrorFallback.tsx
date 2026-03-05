@@ -8,19 +8,19 @@ export default function ErrorFallback({ error, errorInfo, resetError }: ErrorFal
   const [showDetails, setShowDetails] = useState(false);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="max-w-2xl w-full bg-card rounded-2xl shadow-xl p-8">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
             <AlertTriangle className="w-12 h-12 text-red-500" />
           </div>
           
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
               Something went wrong
             </h1>
             
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-muted-foreground mb-6">
               We encountered an unexpected error. Do not worry, your data is safe. 
               You can try refreshing the page or contact support if the problem persists.
             </p>
@@ -34,7 +34,7 @@ export default function ErrorFallback({ error, errorInfo, resetError }: ErrorFal
             <div className="flex gap-3 mb-6">
               <button
                 onClick={resetError}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-lg transition-colors font-medium"
                 aria-label="Try again"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -43,7 +43,7 @@ export default function ErrorFallback({ error, errorInfo, resetError }: ErrorFal
               
               <button
                 onClick={() => window.location.href = '/'}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium"
+                className="px-4 py-2 bg-accent hover:bg-muted text-foreground rounded-lg transition-colors font-medium"
               >
                 Go to Home
               </button>
@@ -51,7 +51,7 @@ export default function ErrorFallback({ error, errorInfo, resetError }: ErrorFal
 
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               aria-expanded={showDetails}
               aria-controls="error-details"
             >
@@ -71,23 +71,23 @@ export default function ErrorFallback({ error, errorInfo, resetError }: ErrorFal
             {showDetails && (
               <div
                 id="error-details"
-                className="mt-4 p-4 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-auto max-h-96"
+                className="mt-4 p-4 bg-accent rounded-lg overflow-auto max-h-96"
               >
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">
                     Error Details
                   </h3>
-                  <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
                     {error.stack || error.message}
                   </pre>
                 </div>
 
                 {errorInfo?.componentStack && (
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    <h3 className="text-sm font-semibold text-foreground mb-2">
                       Component Stack
                     </h3>
-                    <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
                       {errorInfo.componentStack}
                     </pre>
                   </div>

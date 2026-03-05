@@ -100,17 +100,17 @@ export default function CustomMetricsPanel({ contractId }: Props) {
   }, [series, latestPoint]);
 
   return (
-    <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+    <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Custom Metrics</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h3 className="text-lg font-semibold text-foreground">Custom Metrics</h3>
+          <p className="text-sm text-muted-foreground">
             Contract-emitted counters, gauges, and histograms.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <select
-            className="text-sm rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1"
+            className="text-sm rounded-md border border-border bg-card px-2 py-1"
             value={resolution}
             onChange={(event) => setResolution(event.target.value as 'hour' | 'day')}
           >
@@ -124,7 +124,7 @@ export default function CustomMetricsPanel({ contractId }: Props) {
       </div>
 
       {catalogLoading ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Loading metrics…</div>
+        <div className="text-sm text-muted-foreground">Loading metrics…</div>
       ) : catalogError ? (
         <div className="text-sm text-red-600 dark:text-red-400">Failed to load custom metrics.</div>
       ) : catalog && catalog.length > 0 ? (
@@ -135,8 +135,8 @@ export default function CustomMetricsPanel({ contractId }: Props) {
               onClick={() => setSelectedMetric(entry.metric_name)}
               className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                 entry.metric_name === metricName
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border'
               }`}
             >
               {entry.metric_name}
@@ -144,19 +144,19 @@ export default function CustomMetricsPanel({ contractId }: Props) {
           ))}
         </div>
       ) : (
-        <div className="text-sm text-gray-500 dark:text-gray-400">No custom metrics yet.</div>
+        <div className="text-sm text-muted-foreground">No custom metrics yet.</div>
       )}
 
       {seriesLoading ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Loading series…</div>
+        <div className="text-sm text-muted-foreground">Loading series…</div>
       ) : seriesError ? (
         <div className="text-sm text-red-600 dark:text-red-400">Failed to load metric series.</div>
       ) : series && series.points && series.points.length > 0 ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 p-4">
+          <div className="rounded-lg border border-border bg-accent p-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Last {series.points.length} buckets</div>
-              <div className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              <div className="text-sm text-muted-foreground">Last {series.points.length} buckets</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
                 {metricTypeLabel}
               </div>
             </div>
@@ -171,13 +171,13 @@ export default function CustomMetricsPanel({ contractId }: Props) {
             {metrics.map((metric) => (
               <div
                 key={metric.label}
-                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-3"
+                className="rounded-lg border border-border bg-card p-3"
               >
-                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                   <metric.icon className="w-4 h-4" />
                   {metric.label}
                 </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                <div className="text-lg font-semibold text-foreground mt-1">
                   {metric.value}
                 </div>
               </div>
@@ -185,7 +185,7 @@ export default function CustomMetricsPanel({ contractId }: Props) {
           </div>
         </div>
       ) : series ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">No data points for this metric.</div>
+        <div className="text-sm text-muted-foreground">No data points for this metric.</div>
       ) : null}
     </section>
   );

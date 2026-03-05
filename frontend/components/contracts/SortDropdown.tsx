@@ -21,7 +21,7 @@ export function SortDropdown({ value, onChange, showRelevance }: SortDropdownPro
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as SortBy)}
-      className="px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+      className="px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer hover:border-primary/40 transition-colors"
       aria-label="Sort contracts"
     >
       {SORT_OPTIONS.map((option) => (

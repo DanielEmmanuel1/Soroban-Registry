@@ -35,7 +35,7 @@ export default function CompatibilityPage() {
                 {/* Back navigation */}
                 <Link
                     href={`/contracts/${contractId}`}
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors"
+                    className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to contract
@@ -44,25 +44,25 @@ export default function CompatibilityPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
-                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40">
-                            <GitCompare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
+                            <GitCompare className="w-5 h-5 text-primary" />
                         </span>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-2xl font-bold text-foreground">
                             Version Compatibility Matrix
                         </h1>
                     </div>
                     {contract && (
-                        <p className="text-gray-500 dark:text-gray-400 ml-12">
+                        <p className="text-muted-foreground ml-12">
                             {contract.name}{' '}
-                            <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                            <span className="font-mono text-xs bg-accent px-1.5 py-0.5 rounded">
                                 {contract.contract_id.slice(0, 12)}…
                             </span>
                         </p>
                     )}
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 ml-12">
+                    <p className="text-sm text-muted-foreground mt-1 ml-12">
                         Shows which versions of this contract are compatible with other contracts
                         and Stellar versions. Use{' '}
-                        <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                        <code className="text-xs bg-accent px-1 rounded">
                             POST /api/contracts/{contractId}/compatibility
                         </code>{' '}
                         to add entries.
@@ -70,9 +70,9 @@ export default function CompatibilityPage() {
                 </div>
 
                 {/* Content */}
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                <div className="bg-card rounded-2xl border border-border p-6">
                     {isLoading ? (
-                        <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+                        <div className="flex items-center justify-center py-16 gap-3 text-muted-foreground">
                             <Loader2 className="w-6 h-6 animate-spin" />
                             <span className="text-sm">Loading compatibility matrix…</span>
                         </div>

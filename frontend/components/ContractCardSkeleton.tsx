@@ -2,7 +2,7 @@ import LoadingSkeleton from './LoadingSkeleton';
 
 export default function ContractCardSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 glow-border">
       <div className="relative">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">

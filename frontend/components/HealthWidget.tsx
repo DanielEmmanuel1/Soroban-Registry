@@ -18,8 +18,8 @@ export default function HealthWidget({ contract }: HealthWidgetProps) {
   if (isLoading) {
     return (
       <div className="animate-pulse flex items-center gap-2">
-        <div className="h-4 w-4 bg-gray-200 rounded-full" />
-        <div className="h-2 w-16 bg-gray-200 rounded" />
+        <div className="h-4 w-4 bg-muted rounded-full" />
+        <div className="h-2 w-16 bg-muted rounded" />
       </div>
     );
   }

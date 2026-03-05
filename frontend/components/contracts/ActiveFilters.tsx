@@ -23,7 +23,7 @@ export function ActiveFilters({ chips, onClearAll }: ActiveFiltersProps) {
           type="button"
           key={chip.id}
           onClick={chip.onRemove}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border border-primary/30 bg-primary/10 text-primary"
         >
           {chip.label}
           <X className="w-3 h-3" />
@@ -32,7 +32,7 @@ export function ActiveFilters({ chips, onClearAll }: ActiveFiltersProps) {
       <button
         type="button"
         onClick={onClearAll}
-        className="text-xs px-2.5 py-1 rounded-full border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:bg-accent"
       >
         Clear all filters
       </button>

@@ -42,10 +42,18 @@ async fn main() -> Result<()> {
         .await
         .context("Failed to connect to database")?;
 
-    sqlx::migrate!("../../database/migrations")
-        .run(&pool)
-        .await
-        .context("Failed to run migrations")?;
+    let skip_migrations = std::env::var("SKIP_MIGRATIONS")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    if !skip_migrations {
+        sqlx::migrate!("../../database/migrations")
+            .run(&pool)
+            .await
+            .context("Failed to run migrations")?;
+    } else {
+        println!("{} Skipping migrations (SKIP_MIGRATIONS=true)", "ℹ".blue());
+    }
 
     let mut rng: rand::rngs::StdRng = if let Some(seed) = args.seed {
         println!("{} Using seed: {}", "ℹ".blue(), seed);

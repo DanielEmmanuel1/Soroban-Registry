@@ -100,7 +100,7 @@ export default function TagAutocomplete({
       <span>
         {parts.map((part, i) => 
           regex.test(part) ? (
-            <span key={i} className="font-bold text-blue-600 bg-blue-50 rounded-sm px-0.5">
+            <span key={i} className="font-bold text-primary bg-primary/10 rounded-sm px-0.5">
               {part}
             </span>
           ) : (
@@ -115,12 +115,12 @@ export default function TagAutocomplete({
     <div ref={wrapperRef} className={`relative w-full max-w-md ${className}`}>
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
+          <Search className="h-4 w-4 text-muted-foreground" />
         </div>
         <input
           ref={inputRef}
           type="text"
-          className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm transition duration-150 ease-in-out"
+          className="block w-full pl-10 pr-10 py-2 border border-border rounded-lg leading-5 bg-card placeholder-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm transition duration-150 ease-in-out"
           placeholder={placeholder}
           value={query}
           onChange={handleInputChange}
@@ -134,9 +134,9 @@ export default function TagAutocomplete({
         />
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
              {loading ? (
-                <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
              ) : query ? (
-                <X className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={clearSearch} />
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer" onClick={clearSearch} />
              ) : null}
         </div>
       </div>
@@ -144,14 +144,14 @@ export default function TagAutocomplete({
       {isOpen && (
         <ul
           id="tag-results"
-          className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+          className="absolute z-10 mt-1 w-full bg-card shadow-lg max-h-60 rounded-lg py-1 text-base ring-1 ring-border overflow-auto focus:outline-none sm:text-sm"
           role="listbox"
         >
           {results.length > 0 ? (
             results.map((tag) => (
               <li
                 key={tag.id}
-                className="cursor-pointer select-none relative py-2 pl-3 pr-4 hover:bg-gray-100 text-gray-900 group"
+                className="cursor-pointer select-none relative py-2 pl-3 pr-4 hover:bg-accent text-foreground group"
                 role="option"
                 aria-selected={false}
                 onClick={() => handleSelect(tag)}
@@ -160,7 +160,7 @@ export default function TagAutocomplete({
                   <span className="block truncate">
                     {highlightMatch(tag.name, query)}
                   </span>
-                  <span className="text-xs text-gray-500 group-hover:text-gray-700">
+                  <span className="text-xs text-muted-foreground group-hover:text-foreground">
                     ({tag.usageCount} uses)
                   </span>
                 </div>
@@ -168,7 +168,7 @@ export default function TagAutocomplete({
             ))
           ) : (
              hasSearched && !loading && (
-              <li className="cursor-default select-none relative py-2 pl-3 pr-9 text-gray-500 italic">
+              <li className="cursor-default select-none relative py-2 pl-3 pr-9 text-muted-foreground italic">
                 No matching tags
               </li>
              )

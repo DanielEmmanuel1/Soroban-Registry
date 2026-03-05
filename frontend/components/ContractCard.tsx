@@ -29,54 +29,57 @@ export default function ContractCard({ contract }: ContractCardProps) {
         })
       }>
 
-      <div className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10">
+      <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all card-hover glow-border gradient-border-card">
         {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 transition-opacity group-hover:opacity-100" />
 
-        <div className="relative">
+        <div className="relative p-6">
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors truncate">
                   {contract.name}
                 </h3>
                 {contract.is_verified && (
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Verified
+                  </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+              <p className="text-xs text-muted-foreground font-mono">
                 {contract.contract_id.slice(0, 8)}...{contract.contract_id.slice(-6)}
               </p>
             </div>
 
-            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${networkColors[contract.network]}`}>
+            <span className={`ml-3 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide border flex-shrink-0 ${networkColors[contract.network]}`}>
               {contract.network}
             </span>
           </div>
 
           {/* Description */}
           {contract.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
               {contract.description}
             </p>
           )}
 
           {/* Tags */}
           {contract.tags && contract.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-1.5 mb-4">
               {contract.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 text-xs text-primary font-medium"
                 >
                   <Tag className="w-3 h-3" />
                   {tag}
                 </span>
               ))}
               {contract.tags.length > 3 && (
-                <span className="px-2 py-1 text-xs text-gray-500">
-                  +{contract.tags.length - 3} more
+                <span className="px-2 py-1 text-xs text-muted-foreground font-medium">
+                  +{contract.tags.length - 3}
                 </span>
               )}
             </div>
@@ -88,14 +91,14 @@ export default function ContractCard({ contract }: ContractCardProps) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-4 mt-4 border-t border-border">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
               {new Date(contract.created_at).toLocaleDateString()}
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-primary font-medium">
               <span>View details</span>
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3.5 h-3.5" />
             </div>
           </div>
         </div>

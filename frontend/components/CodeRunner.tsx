@@ -108,9 +108,9 @@ export default function CodeRunner({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
-        <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-          <span className="text-xs font-mono text-gray-500 uppercase">{language}</span>
+      <div className="relative rounded-lg overflow-hidden border border-border">
+        <div className="bg-accent px-4 py-2 flex items-center justify-between border-b border-border">
+          <span className="text-xs font-mono text-muted-foreground uppercase">{language}</span>
           <div className="flex items-center gap-2">
             <CodeCopyButton onCopy={handleCopyCode} copied={copied} disabled={isCopying} />
             {language === 'javascript' && (
@@ -118,7 +118,7 @@ export default function CodeRunner({
                 onClick={runCode}
                 disabled={isRunning}
                 className={`px-3 py-1 rounded-md text-xs font-medium text-white transition-colors ${
-                  isRunning ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                  isRunning ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
                 {isRunning ? 'Running...' : 'Run Code'}
@@ -130,14 +130,14 @@ export default function CodeRunner({
           aria-label="Code editor"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full h-64 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none resize-none"
+          className="w-full h-64 p-4 font-mono text-sm bg-surface text-foreground focus:outline-none resize-none"
           spellCheck={false}
         />
       </div>
 
       {(output || isRunning) && (
-        <div className="rounded-lg bg-gray-900 text-gray-100 p-4 font-mono text-sm overflow-x-auto">
-          <div className="text-gray-500 text-xs mb-2 uppercase">Output</div>
+        <div className="rounded-lg bg-surface text-foreground p-4 font-mono text-sm overflow-x-auto">
+          <div className="text-muted-foreground text-xs mb-2 uppercase">Output</div>
           <pre className="whitespace-pre-wrap">{output}</pre>
         </div>
       )}

@@ -49,15 +49,15 @@ export function PublisherStats({ publisher }: PublisherStatsProps) {
       {statItems.map((item) => (
         <div
           key={item.label}
-          className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
+          className="bg-card p-4 rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow"
         >
           <div className={`p-3 rounded-lg w-fit mb-3 ${item.color}`}>
             <item.icon className="w-6 h-6" />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+          <p className="text-sm text-muted-foreground font-medium">
             {item.label}
           </p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+          <p className="text-2xl font-bold text-foreground mt-1">
             {item.value}
           </p>
         </div>

@@ -535,14 +535,14 @@ const DependencyGraph = forwardRef<DependencyGraphHandle, DependencyGraphProps>(
         style={{ WebkitOverflowScrolling: "touch" }}     // ← smooth momentum scroll on iOS
       >
         {/* Mobile scroll hint — hidden on md+ */}
-        <p className="md:hidden text-xs text-gray-500 text-center pb-1 select-none pointer-events-none">
+        <p className="md:hidden text-xs text-muted-foreground text-center pb-1 select-none pointer-events-none">
           ← Scroll to explore →
         </p>
 
         {/* Inner container: enforces minimum width so graph isn't crushed */}
         <div
           ref={containerRef}
-          className="relative h-full bg-gray-950 min-w-[600px] md:min-w-0"  // ← key change
+          className="relative h-full bg-surface min-w-[600px] md:min-w-0"  // ← key change
         >
           <svg
             ref={svgRef}

@@ -78,13 +78,13 @@ export default function ExampleCard({ example }: ExampleCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="p-6 border-b border-border">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start gap-3 min-w-0">
             {avatarSrc && !avatarLoadError ? (
               <div
-                className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"
+                className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-accent"
                 style={{ backgroundColor: avatarFallbackColor }}
               >
                 <Image
@@ -101,13 +101,13 @@ export default function ExampleCard({ example }: ExampleCardProps) {
             ) : null}
 
             <div className="min-w-0">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 truncate">
+              <h3 className="text-xl font-bold text-foreground mb-2 truncate">
                 {example.title}
               </h3>
               <span className={`inline-block px-2 py-1 rounded text-xs font-medium uppercase tracking-wide ${
-                example.category === 'basic' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                example.category === 'advanced' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                example.category === 'basic' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
+                example.category === 'advanced' ? 'bg-secondary/10 text-secondary' :
+                'bg-primary/10 text-primary'
               }`}>
                 {example.category}
               </span>
@@ -119,7 +119,7 @@ export default function ExampleCard({ example }: ExampleCardProps) {
               onClick={() => handleRate(1)}
               disabled={isRating || rating === 1}
               className={`flex items-center gap-1 p-2 rounded-lg transition-colors ${
-                rating === 1 ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400'
+                rating === 1 ? 'bg-green-500/10 text-green-600' : 'hover:bg-accent text-muted-foreground'
               }`}
             >
               <ThumbsUp className="w-5 h-5" />
@@ -129,7 +129,7 @@ export default function ExampleCard({ example }: ExampleCardProps) {
               onClick={() => handleRate(-1)}
               disabled={isRating || rating === -1}
               className={`flex items-center gap-1 p-2 rounded-lg transition-colors ${
-                rating === -1 ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400'
+                rating === -1 ? 'bg-red-500/10 text-red-600' : 'hover:bg-accent text-muted-foreground'
               }`}
             >
               <ThumbsDown className="w-5 h-5" />
@@ -139,7 +139,7 @@ export default function ExampleCard({ example }: ExampleCardProps) {
         </div>
 
         {example.description && (
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-muted-foreground">
             {example.description}
           </p>
         )}
@@ -147,13 +147,13 @@ export default function ExampleCard({ example }: ExampleCardProps) {
 
       <div className="p-6">
         {hasMultipleLangs && (
-          <div className="flex items-center gap-4 mb-4 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-4 mb-4 border-b border-border">
             <button
               onClick={() => setActiveTab('js')}
               className={`pb-2 text-sm font-medium transition-colors border-b-2 ${
                 effectiveTab === 'js'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               JavaScript / TypeScript
@@ -162,8 +162,8 @@ export default function ExampleCard({ example }: ExampleCardProps) {
               onClick={() => setActiveTab('rust')}
               className={`pb-2 text-sm font-medium transition-colors border-b-2 ${
                 effectiveTab === 'rust'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Rust

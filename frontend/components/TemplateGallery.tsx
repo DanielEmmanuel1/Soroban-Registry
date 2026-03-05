@@ -29,7 +29,7 @@ export default function TemplateGallery({
                         <button
                             key={cat}
                             disabled
-                            className="px-4 py-2 rounded-full text-sm font-medium border bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed"
+                            className="px-4 py-2 rounded-full text-sm font-medium border bg-card text-muted-foreground border-border opacity-50 cursor-not-allowed"
                         >
                             {cat.charAt(0).toUpperCase() + cat.slice(1)}
                         </button>
@@ -55,8 +55,8 @@ export default function TemplateGallery({
                         key={cat}
                         onClick={() => setActiveCategory(cat)}
                         className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${activeCategory === cat
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20'
+                            : 'bg-card text-muted-foreground border-border hover:border-primary/40'
                             }`}
                     >
                         {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -65,9 +65,9 @@ export default function TemplateGallery({
             </div>
 
             {filtered.length === 0 ? (
-                <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-                    <LayoutGrid className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">No templates in this category yet.</p>
+                <div className="text-center py-16 bg-card rounded-2xl border border-border">
+                    <LayoutGrid className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No templates in this category yet.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

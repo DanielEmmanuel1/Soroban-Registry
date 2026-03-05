@@ -11,7 +11,7 @@ export default function LoadingSkeleton({
   className = '',
   variant = 'rectangular',
 }: LoadingSkeletonProps) {
-  const baseClasses = 'animate-pulse bg-gray-200 dark:bg-gray-800';
+  const baseClasses = 'animate-pulse bg-muted';
   
   const variantClasses = {
     rectangular: 'rounded-md',

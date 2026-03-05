@@ -81,7 +81,7 @@ export default function PublishPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 bg-background p-4 sm:p-6 rounded-lg border border-border w-full"
+          className="space-y-4 bg-card p-4 sm:p-6 rounded-2xl border border-border w-full"
         >
           <FormInput
             label="Contract ID"
@@ -152,7 +152,7 @@ export default function PublishPage() {
           />
 
           <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-2">
-            <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary text-primary-foreground">
+            <button type="submit" className="w-full sm:w-auto px-6 py-2.5 rounded-lg btn-glow text-primary-foreground font-medium">
               Publish
             </button>
           </div>

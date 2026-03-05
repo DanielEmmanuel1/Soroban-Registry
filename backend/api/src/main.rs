@@ -120,10 +120,18 @@ async fn main() -> Result<()> {
         .connect(&database_url)
         .await?;
 
-    // Run migrations
-    sqlx::migrate!("../../database/migrations")
-        .run(&pool)
-        .await?;
+    // Run migrations (skip if SKIP_MIGRATIONS=true, useful when migrations were applied manually)
+    let skip_migrations = std::env::var("SKIP_MIGRATIONS")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    if skip_migrations {
+        tracing::info!("Skipping automatic migrations (SKIP_MIGRATIONS=true)");
+    } else {
+        sqlx::migrate!("../../database/migrations")
+            .run(&pool)
+            .await?;
+    }
 
     tracing::info!("Database connected and migrations applied");
 
@@ -203,7 +211,6 @@ async fn main() -> Result<()> {
         .merge(routes::contract_routes())
         .merge(routes::publisher_routes())
         .merge(routes::health_routes())
-        .merge(routes::migration_routes())
         .merge(routes::openapi_routes())
         .merge(routes::health_monitor_routes())
         .merge(routes::admin_routes())

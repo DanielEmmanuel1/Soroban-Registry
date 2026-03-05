@@ -18,7 +18,7 @@ export default function CodeCopyButton({
       onClick={onCopy}
       disabled={disabled}
       // Button is intentionally presentation-only; copy logic/analytics live in useCopy.
-      className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
       aria-label={copied ? 'Code copied' : 'Copy code'}
       title={copied ? 'Copied' : 'Copy code'}
     >

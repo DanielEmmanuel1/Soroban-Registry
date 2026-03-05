@@ -15,11 +15,11 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
 
     if (isLoading) {
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-1/2 mb-4"></div>
+            <div className="bg-card rounded-2xl border border-border p-6 animate-pulse">
+                <div className="h-6 bg-muted rounded w-1/2 mb-4"></div>
                 <div className="space-y-3">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-5/6"></div>
+                    <div className="h-4 bg-muted rounded"></div>
+                    <div className="h-4 bg-muted rounded w-5/6"></div>
                 </div>
             </div>
         );
@@ -27,9 +27,9 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
 
     if (error) {
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 flex items-center justify-between text-gray-500">
+            <div className="bg-card rounded-2xl border border-border p-6 flex items-center justify-between text-muted-foreground">
                 <div className="flex items-center gap-3">
-                    <ShieldAlert className="w-5 h-5 text-gray-400" />
+                    <ShieldAlert className="w-5 h-5 text-muted-foreground" />
                     <span className="text-sm font-medium">Verification checks unavailable</span>
                 </div>
             </div>
@@ -40,19 +40,19 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
 
     if (!latestReport) {
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="bg-card rounded-2xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-2">
-                    <Shield className="w-5 h-5 text-gray-400" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Formal Verification</h3>
+                    <Shield className="w-5 h-5 text-muted-foreground" />
+                    <h3 className="font-semibold text-foreground">Formal Verification</h3>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                     No formal verification properties have been analyzed for this contract yet.
                 </p>
                 <a
                     href="https://soroban.stellar.org/docs/fundamentals-and-concepts/security"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:opacity-80"
                 >
                     Learn about writing safer contracts <ExternalLink className="w-3 h-3" />
                 </a>
@@ -64,12 +64,12 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
     const violatedCount = latestReport.properties.filter((p) => p.result.status === "Violated").length;
 
     return (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 group">
+        <div className="bg-card rounded-2xl border border-border p-6 group">
             <div className="flex flex-col mb-4">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-gray-900 dark:text-gray-100" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Formal Verification</h3>
+                        <Shield className="w-5 h-5 text-foreground" />
+                        <h3 className="font-semibold text-foreground">Formal Verification</h3>
                     </div>
                     {violatedCount > 0 ? (
                         <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full">
@@ -81,9 +81,9 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
                         </span>
                     )}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                     Analyzed against {latestReport.properties.length} structural invariants.
-                    <span className="ml-1 text-gray-700 dark:text-gray-300 font-medium">{provedCount} proved</span>,
+                    <span className="ml-1 text-foreground font-medium">{provedCount} proved</span>,
                     <span className={violatedCount > 0 ? "ml-1 text-red-600 dark:text-red-400 font-medium" : "ml-1"}> {violatedCount} violations</span>.
                 </p>
             </div>
@@ -100,7 +100,7 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
                             key={propResult.result.id}
                             className={`border rounded-lg overflow-hidden transition-colors ${isViolated
                                     ? "border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10"
-                                    : "border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30"
+                                    : "border-border bg-accent/50"
                                 }`}
                         >
                             <button
@@ -114,16 +114,16 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
                                         {isUnknown && <ShieldQuestion className="w-4 h-4 text-yellow-500" />}
                                     </div>
                                     <div>
-                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                        <div className="text-sm font-medium text-foreground">
                                             {propResult.property.description || propResult.property.invariant}
                                         </div>
-                                        <div className="text-xs text-gray-500 mt-1 font-mono uppercase">
+                                        <div className="text-xs text-muted-foreground mt-1 font-mono uppercase">
                                             {propResult.property.property_id} • {propResult.result.status}
                                         </div>
                                     </div>
                                 </div>
                                 {isViolated && (
-                                    <div className="flex-shrink-0 text-gray-400 ml-2">
+                                    <div className="flex-shrink-0 text-muted-foreground ml-2">
                                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                     </div>
                                 )}
@@ -144,8 +144,8 @@ export default function FormalVerificationPanel({ contractId }: { contractId: st
                 })}
             </div>
 
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <div className="text-xs text-gray-400 flex justify-between">
+            <div className="mt-5 pt-4 border-t border-border">
+                <div className="text-xs text-muted-foreground flex justify-between">
                     <span>Engine v{latestReport.session.verifier_version}</span>
                     <span>{new Date(latestReport.session.created_at).toLocaleDateString()}</span>
                 </div>

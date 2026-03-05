@@ -51,18 +51,18 @@ export function PublisherContractsList({ contracts }: PublisherContractsListProp
   }, []);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           Published Contracts
-          <span className="text-sm font-normal text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-sm font-normal text-muted-foreground bg-accent px-2 py-0.5 rounded-full">
             {filteredContracts.length}
           </span>
         </h2>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               ref={searchInputRef}
               type="text"
@@ -71,16 +71,16 @@ export function PublisherContractsList({ contracts }: PublisherContractsListProp
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Search contracts"
               aria-keyshortcuts="/"
-              className="pl-9 pr-4 py-2 w-full sm:w-64 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              className="pl-9 pr-4 py-2 w-full sm:w-64 bg-accent border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all"
             />
           </div>
           
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-              className="pl-9 pr-8 py-2 w-full sm:w-40 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer"
+              className="pl-9 pr-8 py-2 w-full sm:w-40 bg-accent border border-border rounded-lg text-sm appearance-none focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="verified">Verified</option>
@@ -97,18 +97,18 @@ export function PublisherContractsList({ contracts }: PublisherContractsListProp
             <Link
               key={contract.id}
               href={`/contracts/${contract.id}`}
-              className="group block bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
+              className="group block bg-accent border border-border rounded-lg p-5 hover:border-primary transition-colors"
             >
               <div className="flex justify-between items-start mb-3">
                 <VerificationBadge status={contract.verificationStatus} />
-                <ArrowUpRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+              <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors truncate">
                 {contract.name}
               </h3>
               
-              <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4 h-10">
+              <p className="text-sm text-muted-foreground line-clamp-2 mb-4 h-10">
                 {contract.description}
               </p>
               
@@ -117,25 +117,25 @@ export function PublisherContractsList({ contracts }: PublisherContractsListProp
                   {contract.tags.slice(0, 3).map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-muted text-muted-foreground"
                     >
                       {tag}
                     </span>
                   ))}
                   {contract.tags.length > 3 && (
-                    <span className="text-xs text-gray-500 flex items-center">+{contract.tags.length - 3}</span>
+                    <span className="text-xs text-muted-foreground flex items-center">+{contract.tags.length - 3}</span>
                   )}
                 </div>
               )}
               
-              <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border">
                 <span>ID: {contract.id.substring(0, 8)}...</span>
                 <span>{new Date(contract.deployedAt).toLocaleDateString()}</span>
               </div>
             </Link>
           ))
         ) : (
-          <div className="col-span-full py-12 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+          <div className="col-span-full py-12 text-center text-muted-foreground bg-accent rounded-lg border border-dashed border-border">
             <p>No contracts found matching your filters.</p>
           </div>
         )}

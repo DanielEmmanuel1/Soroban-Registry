@@ -29,13 +29,13 @@ export function PublisherActivityTimeline({ activity }: PublisherActivityTimelin
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-full">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-        <Clock className="w-5 h-5 text-gray-400" />
+    <div className="bg-card rounded-2xl shadow-sm border border-border p-6 h-full">
+      <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
+        <Clock className="w-5 h-5 text-muted-foreground" />
         Recent Activity
       </h3>
 
-      <div className="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-8">
+      <div className="relative border-l border-border ml-3 space-y-8">
         {sortedActivity.length > 0 ? (
           sortedActivity.map((event) => {
             let Icon = FileCode;
@@ -54,20 +54,20 @@ export function PublisherActivityTimeline({ activity }: PublisherActivityTimelin
 
             return (
               <div key={event.id} className="relative pl-8">
-                <span className={`absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white dark:ring-gray-800 ${colorClass}`}>
+                <span className={`absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-card ${colorClass}`}>
                   <Icon className="w-3.5 h-3.5" />
                 </span>
                 
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <h4 className="text-sm font-semibold text-foreground">
                       {title}
                     </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {event.contractName}
                     </p>
                   </div>
-                  <time className="text-xs text-gray-400 font-mono whitespace-nowrap">
+                  <time className="text-xs text-muted-foreground font-mono whitespace-nowrap">
                     {getRelativeTime(event.timestamp)}
                   </time>
                 </div>
@@ -75,7 +75,7 @@ export function PublisherActivityTimeline({ activity }: PublisherActivityTimelin
             );
           })
         ) : (
-          <p className="pl-8 text-sm text-gray-500 dark:text-gray-400 italic">
+          <p className="pl-8 text-sm text-muted-foreground italic">
             No recent activity recorded.
           </p>
         )}

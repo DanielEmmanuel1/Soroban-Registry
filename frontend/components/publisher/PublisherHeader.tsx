@@ -15,7 +15,7 @@ export function PublisherHeader({ publisher }: PublisherHeaderProps) {
   });
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8">
+    <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
         {/* Avatar */}
         <div className="relative shrink-0">
@@ -24,7 +24,7 @@ export function PublisherHeader({ publisher }: PublisherHeaderProps) {
             alt={publisher.displayName}
             width={128}
             height={128}
-            className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-gray-100 dark:border-gray-700 object-cover bg-gray-100 dark:bg-gray-800"
+            className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-border object-cover bg-accent"
             unoptimized={!publisher.avatarUrl}
           />
         </div>
@@ -33,20 +33,20 @@ export function PublisherHeader({ publisher }: PublisherHeaderProps) {
         <div className="flex-1 w-full">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
                 {publisher.displayName}
                 {publisher.verifiedContracts > 0 && (
-                  <CheckCircle className="w-6 h-6 text-blue-500" aria-label="Verified Publisher" />
+                  <CheckCircle className="w-6 h-6 text-primary" aria-label="Verified Publisher" />
                 )}
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1 break-all">
+              <p className="text-sm text-muted-foreground font-mono mt-1 break-all">
                 {publisher.address}
               </p>
             </div>
             
             <button
               disabled
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors text-sm w-full md:w-auto"
+              className="px-4 py-2 bg-primary hover:opacity-90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground rounded-lg font-medium transition-colors text-sm w-full md:w-auto"
               title="Coming soon"
             >
               Follow Publisher
@@ -55,12 +55,12 @@ export function PublisherHeader({ publisher }: PublisherHeaderProps) {
           </div>
 
           {publisher.bio && (
-            <p className="text-gray-600 dark:text-gray-300 mb-4 max-w-2xl leading-relaxed">
+            <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">
               {publisher.bio}
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
               <span>Joined {formattedDate}</span>
@@ -71,7 +71,7 @@ export function PublisherHeader({ publisher }: PublisherHeaderProps) {
                 href={publisher.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="flex items-center gap-1.5 hover:text-primary transition-colors"
                 aria-label="Visit website"
               >
                 <Globe className="w-4 h-4" />
@@ -85,7 +85,7 @@ export function PublisherHeader({ publisher }: PublisherHeaderProps) {
                 href={publisher.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
                 aria-label="Visit GitHub profile"
               >
                 <Github className="w-4 h-4" />

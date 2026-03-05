@@ -37,7 +37,7 @@ export default function ExampleGallery({ contractId }: ExampleGalleryProps) {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-foreground">
                 Usage Examples
               </h2>
             </div>
@@ -55,7 +55,7 @@ export default function ExampleGallery({ contractId }: ExampleGalleryProps) {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
+      <div className="p-4 bg-red-500/10 text-red-500 rounded-xl flex items-center gap-2">
         <AlertCircle className="w-5 h-5" />
         Failed to load examples
       </div>
@@ -64,12 +64,12 @@ export default function ExampleGallery({ contractId }: ExampleGalleryProps) {
 
   if (!examples || examples.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-        <Terminal className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+      <div className="text-center py-12 bg-accent rounded-xl border border-dashed border-border">
+        <Terminal className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">
           No Examples Yet
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+        <p className="text-muted-foreground max-w-sm mx-auto">
           There are no code examples for this contract yet. Be the first to contribute one!
         </p>
       </div>
@@ -91,10 +91,10 @@ export default function ExampleGallery({ contractId }: ExampleGalleryProps) {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold text-foreground">
               Usage Examples
             </h2>
-            <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400">
+            <span className="px-2 py-1 rounded-full bg-accent text-xs font-medium text-muted-foreground">
               {filteredExamples.length}
             </span>
           </div>
@@ -103,26 +103,26 @@ export default function ExampleGallery({ contractId }: ExampleGalleryProps) {
         {/* Search + category filters: stack on mobile, row on sm+ */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search examples by title or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all min-h-[44px]"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-card text-sm focus:ring-2 focus:ring-primary/40 outline-none transition-all min-h-[44px]"
             />
           </div>
 
           {/* Category tabs: scroll horizontally on mobile if needed */}
-          <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-x-auto shrink-0">
+          <div className="flex p-1 bg-accent rounded-lg overflow-x-auto shrink-0">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap min-h-[44px] ${
                   selectedCategory === cat
-                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
-                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    ? 'bg-card shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {cat}
@@ -145,8 +145,8 @@ export default function ExampleGallery({ contractId }: ExampleGalleryProps) {
           ))
         ) : (
           // Empty state spans all columns so it stays centered
-          <div className="col-span-full text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="col-span-full text-center py-12 bg-accent rounded-xl">
+            <p className="text-muted-foreground">
               No examples found matching your criteria.
             </p>
           </div>

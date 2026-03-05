@@ -26,8 +26,8 @@ const COLORS = [
 
 const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data }) => {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+    <div className="bg-card rounded-2xl border border-border p-6 h-full flex flex-col">
+      <h3 className="text-lg font-semibold text-foreground mb-4">
         Contracts by Category
       </h3>
       <div className="flex-1 min-h-[300px]">

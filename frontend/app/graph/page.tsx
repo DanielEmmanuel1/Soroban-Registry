@@ -18,8 +18,8 @@ export default function GraphPage() {
                 fallback={
                     <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
                         <div className="text-center">
-                            <div className="inline-block w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-                            <p className="text-gray-400 text-sm">Loading dependency graph…</p>
+                            <div className="inline-block w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                            <p className="text-muted-foreground text-sm">Loading dependency graph…</p>
                         </div>
                     </div>
                 }

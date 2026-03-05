@@ -1,87 +1,200 @@
 'use client';
 
-import { Package, GitBranch, ChevronDown, BarChart2, Users } from 'lucide-react';
+import { Package, GitBranch, ChevronDown, BarChart2, Users, Menu, X, Layers, Search, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const dropdownTimeout = useRef<NodeJS.Timeout | null>(null);
+    const pathname = usePathname();
+
+    // Close mobile menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [pathname]);
+
+    const isActive = (href: string) => pathname === href;
+    const isExploreActive = ['/publishers', '/stats', '/templates'].some(p => pathname.startsWith(p));
+
+    const handleDropdownEnter = () => {
+        if (dropdownTimeout.current) clearTimeout(dropdownTimeout.current);
+        setIsDropdownOpen(true);
+    };
+
+    const handleDropdownLeave = () => {
+        dropdownTimeout.current = setTimeout(() => setIsDropdownOpen(false), 150);
+    };
 
     return (
-        <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <nav className="nav-glow bg-background/80 backdrop-blur-2xl sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    <Link href="/" className="flex items-center gap-2">
-                        <Package className="w-8 h-8 text-primary" />
-                        <span className="text-xl font-bold bg-linear-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                            Soroban Registry
+                <div className="flex items-center justify-between h-14">
+                    {/* Logo */}
+                    <Link href="/" className="flex items-center gap-2 group">
+                        <div className="w-7 h-7 rounded-md bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm shadow-primary/25">
+                            <Package className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-base font-bold text-foreground tracking-tight hidden sm:block">
+                            Soroban<span className="text-primary">Registry</span>
                         </span>
                     </Link>
-                    <div className="flex items-center gap-4">
+
+                    {/* Desktop Navigation – centered links */}
+                    <div className="hidden md:flex items-center gap-0.5">
                         <Link
                             href="/contracts"
-                            className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
+                            className={`px-3 py-1.5 rounded-md text-[13px] font-medium transition-all ${
+                                isActive('/contracts')
+                                    ? 'text-primary bg-primary/10'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                            }`}
                         >
                             Browse
                         </Link>
-                        
-                        {/* Contracts Dropdown */}
-                        <div 
+
+                        {/* Explore Dropdown */}
+                        <div
                             className="relative"
-                            onMouseEnter={() => setIsDropdownOpen(true)}
-                            onMouseLeave={() => setIsDropdownOpen(false)}
+                            onMouseEnter={handleDropdownEnter}
+                            onMouseLeave={handleDropdownLeave}
                         >
                             <button
-                                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium focus:outline-none py-4"
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all focus:outline-none ${
+                                    isExploreActive || isDropdownOpen
+                                        ? 'text-primary bg-primary/10'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                }`}
                             >
-                                Contracts
-                                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                Explore
+                                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
-                            
-                            {/* Dropdown Menu */}
-                            {isDropdownOpen && (
-                                <div className="absolute top-full left-0 w-48 z-50 pt-2">
-                                    <div className="bg-background rounded-md shadow-lg border border-border overflow-hidden">
-                                        <div className="py-1">
-                                            <Link
-                                                href="/publishers"
-                                                className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <Users className="w-4 h-4" />
-                                                Publisher
-                                            </Link>
-                                            <Link
-                                                href="/stats"
-                                                className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <BarChart2 className="w-4 h-4" />
-                                                Statistics
-                                            </Link>
-                                        </div>
+
+                            {/* Compact dropdown */}
+                            <div
+                                className={`absolute top-full left-1/2 -translate-x-1/2 w-44 pt-1.5 transition-all duration-150 ${
+                                    isDropdownOpen
+                                        ? 'opacity-100 translate-y-0 pointer-events-auto'
+                                        : 'opacity-0 -translate-y-1 pointer-events-none'
+                                }`}
+                            >
+                                <div className="rounded-lg border border-border bg-card shadow-lg shadow-black/8 overflow-hidden">
+                                    <div className="py-1">
+                                        <Link
+                                            href="/publishers"
+                                            className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                                                isActive('/publishers')
+                                                    ? 'text-primary bg-primary/5'
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                            }`}
+                                        >
+                                            <Users className="w-3.5 h-3.5 text-primary/70" />
+                                            Publishers
+                                        </Link>
+                                        <Link
+                                            href="/stats"
+                                            className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                                                isActive('/stats')
+                                                    ? 'text-primary bg-primary/5'
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                            }`}
+                                        >
+                                            <BarChart2 className="w-3.5 h-3.5 text-primary/70" />
+                                            Statistics
+                                        </Link>
+                                        <Link
+                                            href="/templates"
+                                            className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                                                isActive('/templates')
+                                                    ? 'text-primary bg-primary/5'
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                            }`}
+                                        >
+                                            <Layers className="w-3.5 h-3.5 text-primary/70" />
+                                            Templates
+                                        </Link>
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
                         <Link
                             href="/graph"
-                            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all ${
+                                isActive('/graph')
+                                    ? 'text-primary bg-primary/10'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                            }`}
                         >
-                            <GitBranch className="w-4 h-4" />
+                            <GitBranch className="w-3 h-3" />
                             Graph
                         </Link>
+                    </div>
+
+                    {/* Right actions */}
+                    <div className="hidden md:flex items-center gap-1.5">
+                        <ThemeToggle />
                         <Link
                             href="/publish"
-                            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium text-sm"
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-primary text-primary-foreground text-[13px] font-semibold btn-glow transition-all hover:brightness-110"
                         >
-                            Publish Contract
+                            <Plus className="w-3.5 h-3.5" />
+                            Publish
                         </Link>
-                        <div className="border-l border-border pl-4 ml-2">
-                            <ThemeToggle />
-                        </div>
+                    </div>
+
+                    {/* Mobile */}
+                    <div className="flex md:hidden items-center gap-1.5">
+                        <ThemeToggle />
+                        <button
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                            aria-label="Toggle mobile menu"
+                        >
+                            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        </button>
                     </div>
                 </div>
+
+                {/* Mobile Navigation */}
+                {mobileMenuOpen && (
+                    <div className="md:hidden pb-4 pt-2 border-t border-border animate-fade-in-up">
+                        <div className="flex flex-col gap-0.5">
+                            {[
+                                { href: '/contracts', label: 'Browse Contracts', icon: Search },
+                                { href: '/publishers', label: 'Publishers', icon: Users },
+                                { href: '/stats', label: 'Statistics', icon: BarChart2 },
+                                { href: '/templates', label: 'Templates', icon: Layers },
+                                { href: '/graph', label: 'Dependency Graph', icon: GitBranch },
+                            ].map(({ href, label, icon: Icon }) => (
+                                <Link
+                                    key={href}
+                                    href={href}
+                                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                        isActive(href)
+                                            ? 'text-primary bg-primary/10'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                    }`}
+                                >
+                                    <Icon className="w-4 h-4" />
+                                    {label}
+                                </Link>
+                            ))}
+                            <div className="pt-2 mt-1 border-t border-border">
+                                <Link
+                                    href="/publish"
+                                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm btn-glow"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Publish Contract
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </nav>
     );

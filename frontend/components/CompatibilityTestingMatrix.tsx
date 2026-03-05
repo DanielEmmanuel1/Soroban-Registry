@@ -56,7 +56,7 @@ function StatusCell({ entry }: { entry?: CompatibilityTestEntry }) {
     if (!entry) {
         return (
             <td className="px-3 py-2 text-center">
-                <span className="text-gray-300 dark:text-gray-600">—</span>
+                <span className="text-muted-foreground">—</span>
             </td>
         );
     }
@@ -73,7 +73,7 @@ function StatusCell({ entry }: { entry?: CompatibilityTestEntry }) {
             <div className="flex flex-col items-center gap-1">
                 <StatusBadge status={entry.status} />
                 {entry.test_duration_ms != null && (
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    <span className="text-[10px] text-muted-foreground">
                         {entry.test_duration_ms}ms
                     </span>
                 )}
@@ -87,8 +87,8 @@ function SummaryCards({ summary }: { summary: CompatibilityTestMatrixResponse['s
         {
             label: 'Total Tests',
             value: summary.total_tests,
-            color: 'text-gray-900 dark:text-white',
-            bg: 'bg-gray-50 dark:bg-gray-800/60',
+            color: 'text-foreground',
+            bg: 'bg-accent',
         },
         {
             label: 'Compatible',
@@ -118,7 +118,7 @@ function SummaryCards({ summary }: { summary: CompatibilityTestMatrixResponse['s
                     className={`${card.bg} rounded-lg px-4 py-3 text-center`}
                 >
                     <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <div className="text-xs text-muted-foreground mt-0.5">
                         {card.label}
                     </div>
                 </div>
@@ -130,7 +130,7 @@ function SummaryCards({ summary }: { summary: CompatibilityTestMatrixResponse['s
 function HistoryTimeline({ changes }: { changes: CompatibilityHistoryEntry[] }) {
     if (changes.length === 0) {
         return (
-            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
+            <p className="text-sm text-muted-foreground text-center py-6">
                 No compatibility changes recorded yet.
             </p>
         );
@@ -141,19 +141,19 @@ function HistoryTimeline({ changes }: { changes: CompatibilityHistoryEntry[] }) 
             {changes.map((change) => (
                 <div
                     key={change.id}
-                    className="flex items-start gap-3 text-sm border-l-2 border-gray-200 dark:border-gray-700 pl-3"
+                    className="flex items-start gap-3 text-sm border-l-2 border-border pl-3"
                 >
                     <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-900 dark:text-white">
+                            <span className="font-medium text-foreground">
                                 SDK {change.sdk_version}
                             </span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500 dark:text-gray-400">
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-muted-foreground">
                                 {change.wasm_runtime}
                             </span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500 dark:text-gray-400 capitalize">
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-muted-foreground capitalize">
                                 {change.network}
                             </span>
                         </div>
@@ -161,18 +161,18 @@ function HistoryTimeline({ changes }: { changes: CompatibilityHistoryEntry[] }) 
                             {change.previous_status && (
                                 <>
                                     <StatusBadge status={change.previous_status} />
-                                    <span className="text-gray-400">→</span>
+                                    <span className="text-muted-foreground">→</span>
                                 </>
                             )}
                             <StatusBadge status={change.new_status} />
                         </div>
                         {change.change_reason && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 {change.change_reason}
                             </p>
                         )}
                     </div>
-                    <time className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                    <time className="text-xs text-muted-foreground whitespace-nowrap">
                         {new Date(change.changed_at).toLocaleDateString()}
                     </time>
                 </div>
@@ -228,8 +228,8 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
 
     if (isLoading) {
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                <div className="flex items-center justify-center py-12 gap-3 text-gray-400">
+            <div className="bg-card rounded-2xl border border-border p-6">
+                <div className="flex items-center justify-center py-12 gap-3 text-muted-foreground">
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span className="text-sm">Loading compatibility matrix…</span>
                 </div>
@@ -239,7 +239,7 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
 
     if (isError) {
         return (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="bg-card rounded-2xl border border-border p-6">
                 <p className="text-red-500 dark:text-red-400 text-sm text-center py-8">
                     {(error as Error)?.message ?? 'Failed to load compatibility data.'}
                 </p>
@@ -260,11 +260,11 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-semibold text-foreground">
                         SDK Compatibility Matrix
                     </h3>
                     {matrix.last_tested && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Last tested {new Date(matrix.last_tested).toLocaleString()}
                         </p>
@@ -279,7 +279,7 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
                     )}
                     <button
                         onClick={() => setShowHistory(!showHistory)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-muted-foreground hover:bg-accent transition-colors"
                     >
                         <History className="w-3.5 h-3.5" />
                         History
@@ -287,7 +287,7 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
                     </button>
                     <button
                         onClick={() => setShowRunTest(!showRunTest)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-colors"
                     >
                         <Play className="w-3.5 h-3.5" />
                         Run Test
@@ -300,43 +300,43 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
 
             {/* Run Test Form */}
             {showRunTest && (
-                <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 p-4">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+                    <h4 className="text-sm font-semibold text-foreground mb-3">
                         Run Compatibility Test
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <label className="block text-xs text-muted-foreground mb-1">
                                 SDK Version
                             </label>
                             <input
                                 type="text"
                                 value={testForm.sdk_version}
                                 onChange={(e) => setTestForm({ ...testForm, sdk_version: e.target.value })}
-                                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+                                className="w-full px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground"
                                 placeholder="e.g. 22.0.0"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <label className="block text-xs text-muted-foreground mb-1">
                                 Wasm Runtime
                             </label>
                             <input
                                 type="text"
                                 value={testForm.wasm_runtime}
                                 onChange={(e) => setTestForm({ ...testForm, wasm_runtime: e.target.value })}
-                                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+                                className="w-full px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground"
                                 placeholder="e.g. wasmtime-25.0"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <label className="block text-xs text-muted-foreground mb-1">
                                 Network
                             </label>
                             <select
                                 value={testForm.network}
                                 onChange={(e) => setTestForm({ ...testForm, network: e.target.value })}
-                                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+                                className="w-full px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground"
                             >
                                 <option value="mainnet">Mainnet</option>
                                 <option value="testnet">Testnet</option>
@@ -347,7 +347,7 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
                     <button
                         onClick={() => runTestMutation.mutate(testForm)}
                         disabled={runTestMutation.isPending}
-                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium transition-colors"
                     >
                         {runTestMutation.isPending ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -371,44 +371,44 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
 
             {/* Matrix Table */}
             {matrix.entries.length === 0 ? (
-                <div className="text-center py-12 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-                    <CheckCircle className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <div className="text-center py-12 rounded-2xl border border-border bg-card">
+                    <CheckCircle className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
                         No compatibility tests recorded yet. Run a test to get started.
                     </p>
                 </div>
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-                        <thead className="bg-gray-50 dark:bg-gray-800/60">
+                <div className="overflow-x-auto rounded-2xl border border-border">
+                    <table className="min-w-full divide-y divide-border text-sm">
+                        <thead className="bg-accent">
                             <tr>
-                                <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800/60 px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap border-r border-gray-200 dark:border-gray-700">
+                                <th className="sticky left-0 z-10 bg-accent px-3 py-3 text-left font-semibold text-foreground whitespace-nowrap border-r border-border">
                                     SDK Version / Runtime
                                 </th>
                                 {matrix.networks.map((net) => (
                                     <th
                                         key={net}
-                                        className="px-3 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap capitalize"
+                                        className="px-3 py-3 text-center font-semibold text-foreground whitespace-nowrap capitalize"
                                     >
                                         {net}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+                        <tbody className="bg-card divide-y divide-border">
                             {matrix.sdk_versions.map((sdk) =>
                                 matrix.wasm_runtimes.map((runtime) => (
                                     <tr
                                         key={`${sdk}|${runtime}`}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                                        className="hover:bg-accent transition-colors"
                                     >
-                                        <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 px-3 py-2 border-r border-gray-100 dark:border-gray-800 whitespace-nowrap">
-                                            <div className="font-medium text-gray-900 dark:text-white">
-                                                <span className="inline-block px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-mono text-xs">
+                                        <td className="sticky left-0 z-10 bg-card px-3 py-2 border-r border-border whitespace-nowrap">
+                                            <div className="font-medium text-foreground">
+                                                <span className="inline-block px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs">
                                                     SDK {sdk}
                                                 </span>
                                             </div>
-                                            <div className="text-xs text-gray-400 font-mono mt-0.5">
+                                            <div className="text-xs text-muted-foreground font-mono mt-0.5">
                                                 {runtime}
                                             </div>
                                         </td>
@@ -426,15 +426,15 @@ export default function CompatibilityTestingMatrix({ contractId }: Compatibility
 
             {/* History Panel */}
             {showHistory && (
-                <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <div className="rounded-2xl border border-border bg-card p-4">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                         <History className="w-4 h-4" />
                         Compatibility History
                     </h4>
                     {history ? (
                         <HistoryTimeline changes={history.changes} />
                     ) : (
-                        <div className="flex items-center justify-center py-6 text-gray-400">
+                        <div className="flex items-center justify-center py-6 text-muted-foreground">
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
                             Loading history…
                         </div>

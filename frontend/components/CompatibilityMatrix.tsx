@@ -68,7 +68,7 @@ export function CompatibilityMatrixDisplay({ data, contractId }: CompatibilityMa
 
             {/* Summary + Export row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                     {data.total_entries} compatibility{' '}
                     {data.total_entries === 1 ? 'record' : 'records'} across{' '}
                     {sourceVersions.length} source{' '}
@@ -78,7 +78,7 @@ export function CompatibilityMatrixDisplay({ data, contractId }: CompatibilityMa
                     <a
                         href={csvUrl}
                         download="compatibility.csv"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground hover:bg-accent transition-colors"
                     >
                         <Download className="w-3.5 h-3.5" />
                         CSV
@@ -86,7 +86,7 @@ export function CompatibilityMatrixDisplay({ data, contractId }: CompatibilityMa
                     <a
                         href={jsonUrl}
                         download="compatibility.json"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground hover:bg-accent transition-colors"
                     >
                         <FileJson className="w-3.5 h-3.5" />
                         JSON
@@ -96,44 +96,44 @@ export function CompatibilityMatrixDisplay({ data, contractId }: CompatibilityMa
 
             {/* Matrix table */}
             {sourceVersions.length === 0 || uniqueTargets.length === 0 ? (
-                <div className="text-center py-12 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-                    <CheckCircle className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <div className="text-center py-12 rounded-xl border border-border bg-card">
+                    <CheckCircle className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
                         No compatibility data yet. Add entries using the API.
                     </p>
                 </div>
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-                        <thead className="bg-gray-50 dark:bg-gray-800/60">
+                <div className="overflow-x-auto rounded-xl border border-border">
+                    <table className="min-w-full divide-y divide-border text-sm">
+                        <thead className="bg-accent">
                             <tr>
-                                <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800/60 px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap border-r border-gray-200 dark:border-gray-700">
+                                <th className="sticky left-0 z-10 bg-accent px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap border-r border-border">
                                     Target Contract @ Version
                                 </th>
                                 {sourceVersions.map((v) => (
                                     <th
                                         key={v}
-                                        className="px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap"
+                                        className="px-4 py-3 text-center font-semibold text-foreground whitespace-nowrap"
                                     >
-                                        <span className="inline-block px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-mono text-xs">
+                                        <span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary font-mono text-xs">
                                             v{v}
                                         </span>
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+                        <tbody className="bg-card divide-y divide-border">
                             {uniqueTargets.map((target) => (
                                 <tr
                                     key={`${target.target_contract_id}@${target.target_version}`}
-                                    className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                                    className="hover:bg-accent transition-colors"
                                 >
-                                    <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 px-4 py-3 font-medium text-gray-900 dark:text-white border-r border-gray-100 dark:border-gray-800 whitespace-nowrap">
+                                    <td className="sticky left-0 z-10 bg-card px-4 py-3 font-medium text-foreground border-r border-border whitespace-nowrap">
                                         <div>{target.target_contract_name}</div>
-                                        <div className="text-xs text-gray-400 font-mono mt-0.5">
+                                        <div className="text-xs text-muted-foreground font-mono mt-0.5">
                                             v{target.target_version}
                                             {target.stellar_version && (
-                                                <span className="ml-2 text-gray-400">
+                                                <span className="ml-2 text-muted-foreground">
                                                     (Stellar {target.stellar_version})
                                                 </span>
                                             )}
@@ -161,7 +161,7 @@ export function CompatibilityMatrixDisplay({ data, contractId }: CompatibilityMa
                                                         <CompatibilityBadge isCompatible={match.is_compatible} />
                                                     </div>
                                                 ) : (
-                                                    <span className="text-gray-300 dark:text-gray-600">—</span>
+                                                    <span className="text-muted-foreground">—</span>
                                                 )}
                                             </td>
                                         );

@@ -212,10 +212,6 @@ pub fn health_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(handlers::health_check))
         .route("/api/stats", get(handlers::get_stats))
-        .route(
-            "/api/activity-feed",
-            get(activity_feed_handlers::get_activity_feed),
-        )
 }
 
 pub fn health_monitor_routes() -> Router<AppState> {
