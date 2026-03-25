@@ -14,6 +14,12 @@ import TagAutocomplete from '@/components/tags/TagAutocomplete';
 import { Filter, Package, SlidersHorizontal, X, Search, Sparkles, CheckCircle, Users, LayoutGrid, List } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import QueryBuilder from '@/components/contracts/QueryBuilder';
+import QuerySummary from '@/components/contracts/QuerySummary';
+import FavoriteSearches from '@/components/contracts/FavoriteSearches';
+import { useSearchUrlSync } from '@/hooks/useSearchUrlSync';
+import { QueryNode } from '@/lib/api';
+import { useMutation } from '@tanstack/react-query';
 
 const DEFAULT_PAGE_SIZE = 12;
 const CATEGORY_OPTIONS = [
@@ -162,9 +168,22 @@ export function ContractsContent() {
     getInitialFilters(new URLSearchParams(searchParams.toString())),
   );
 
+  const [isAdvancedSearch, setIsAdvancedSearch] = useState(() => 
+    !!searchParams.get('adv')
+  );
+  
+  const [advancedQuery, setAdvancedQuery] = useState<QueryNode | null>(null);
+  
+  const { syncToUrl, clearUrl } = useSearchUrlSync(advancedQuery, (q) => {
+    setAdvancedQuery(q);
+    setIsAdvancedSearch(true);
+  });
+
   const debouncedQuery = useDebouncedValue(filters.query, 300);
 
   useEffect(() => {
+    if (isAdvancedSearch) return; // Managed by useSearchUrlSync
+
     const params = new URLSearchParams();
     if (debouncedQuery) params.set('query', debouncedQuery);
     filters.categories.forEach((category) => params.append('category', category));
@@ -180,7 +199,7 @@ export function ContractsContent() {
 
     const next = params.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [debouncedQuery, filters, pathname, router]);
+  }, [debouncedQuery, filters, pathname, router, isAdvancedSearch]);
 
   const apiParams = useMemo<ContractSearchParams>(
     () => ({
@@ -199,10 +218,32 @@ export function ContractsContent() {
     [debouncedQuery, filters],
   );
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['contracts', apiParams],
-    queryFn: () => api.getContracts(apiParams),
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['contracts', isAdvancedSearch ? advancedQuery : apiParams],
+    queryFn: () => {
+      if (isAdvancedSearch && advancedQuery) {
+        return api.advancedSearchContracts({
+          query: advancedQuery,
+          sort_by: filters.sort_by,
+          sort_order: filters.sort_order,
+          limit: filters.page_size,
+          offset: (filters.page - 1) * filters.page_size,
+        });
+      }
+      return api.getContracts(apiParams);
+    },
     placeholderData: (previousData) => previousData,
+    enabled: true,
+  });
+
+  const saveFavoriteMutation = useMutation({
+    mutationFn: (name: string) => {
+      if (!advancedQuery) throw new Error('No query to save');
+      return api.saveFavoriteSearch({ name, query: advancedQuery });
+    },
+    onSuccess: () => {
+      alert('Search saved to favorites!');
+    },
   });
 
   const { data: stats } = useQuery({
@@ -413,46 +454,83 @@ export function ContractsContent() {
               Search, filter, and find the perfect building blocks for your project.
             </p>
 
+            {/* Search mode toggle */}
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <button 
+                onClick={() => {
+                  setIsAdvancedSearch(false);
+                  clearUrl();
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${!isAdvancedSearch ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Basic Search
+              </button>
+              <button 
+                onClick={() => setIsAdvancedSearch(true)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${isAdvancedSearch ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Advanced Builder
+              </button>
+            </div>
+
             {/* Inline search */}
             <div className="max-w-2xl mx-auto mb-10">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={filters.query}
-                  onChange={(e) => setFilters((current) => ({ ...current, query: e.target.value, page: 1 }))}
-                  placeholder="Search contracts by name, category, or tag..."
-                  aria-label="Search contracts"
-                  aria-keyshortcuts="/"
-                  className="w-full pl-12 pr-24 py-4 rounded-xl border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
-                />
-                {filters.query && (
+              {!isAdvancedSearch ? (
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={filters.query}
+                    onChange={(e) => setFilters((current) => ({ ...current, query: e.target.value, page: 1 }))}
+                    placeholder="Search contracts by name, category, or tag..."
+                    aria-label="Search contracts"
+                    aria-keyshortcuts="/"
+                    className="w-full pl-12 pr-24 py-4 rounded-xl border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
+                  />
+                  {filters.query && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logEvent('search_performed', {
+                          keyword: '',
+                          action: 'clear_query',
+                        });
+                        setFilters((current) => ({ ...current, query: '', page: 1 }));
+                      }}
+                      className="absolute right-20 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => {
-                      logEvent('search_performed', {
-                        keyword: '',
-                        action: 'clear_query',
-                      });
-                      setFilters((current) => ({ ...current, query: '', page: 1 }));
-                    }}
-                    className="absolute right-20 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Clear search"
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium text-sm"
                   >
-                    <X className="w-4 h-4" />
+                    Filters
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setMobileFiltersOpen(true)}
-                  className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium text-sm"
-                >
-                  Filters
-                </button>
-                <div className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center gap-2">
-                  <kbd className="px-2 py-1 rounded bg-muted text-muted-foreground text-xs font-mono border border-border">/</kbd>
+                  <div className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center gap-2">
+                    <kbd className="px-2 py-1 rounded bg-muted text-muted-foreground text-xs font-mono border border-border">/</kbd>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-6 text-left">
+                  <QueryBuilder 
+                    initialQuery={advancedQuery || undefined}
+                    onChange={(q) => setAdvancedQuery(q)}
+                    onSearch={() => {
+                      if (advancedQuery) syncToUrl(advancedQuery);
+                      refetch();
+                    }}
+                    onSave={() => {
+                      const name = prompt('Enter a name for this favorite search:');
+                      if (name) saveFavoriteMutation.mutate(name);
+                    }}
+                  />
+                  {advancedQuery && <QuerySummary query={advancedQuery} />}
+                </div>
+              )}
             </div>
 
             {/* Stats row */}
@@ -528,31 +606,50 @@ export function ContractsContent() {
 
         <div className="flex gap-8 mt-6">
           {/* Sidebar filters (desktop) */}
-          <aside className="hidden md:block w-64 flex-shrink-0">
+          <aside className="hidden md:flex flex-col w-72 flex-shrink-0 gap-6">
             <div className="gradient-border-card p-5 sticky top-20">
               <div className="flex items-center gap-2 mb-5">
                 <Filter className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Filters</h3>
+                <h3 className="text-sm font-semibold text-foreground">{isAdvancedSearch ? 'Search Context' : 'Filters'}</h3>
               </div>
-              {filterPanel}
-
-              <div className="mt-5 pt-4 border-t border-border">
-                <div className="w-full">
-                  <TagAutocomplete
-                    onSelect={(tag) =>
-                      setFilters((current) => {
-                        if (current.tags.includes(tag.name)) return current;
-                        return {
-                          ...current,
-                          tags: [...current.tags, tag.name],
-                          page: 1,
-                        };
-                      })
-                    }
-                    placeholder="Filter by tag..."
+              
+              {!isAdvancedSearch ? (
+                <>
+                  {filterPanel}
+                  <div className="mt-5 pt-4 border-t border-border">
+                    <div className="w-full">
+                      <TagAutocomplete
+                        onSelect={(tag) =>
+                          setFilters((current) => {
+                            if (current.tags.includes(tag.name)) return current;
+                            return {
+                              ...current,
+                              tags: [...current.tags, tag.name],
+                              page: 1,
+                            };
+                          })
+                        }
+                        placeholder="Filter by tag..."
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-6">
+                  <FavoriteSearches 
+                    onLoad={(q) => {
+                      setAdvancedQuery(q);
+                      syncToUrl(q);
+                    }}
                   />
+                  <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
+                    <p className="text-xs text-muted-foreground font-medium mb-2">PRO TIP</p>
+                    <p className="text-xs leading-relaxed text-foreground">
+                      Use the builder to create complex logic like <span className="text-primary font-bold">Category = DeFi AND (Network = mainnet OR Verified = true)</span>.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </aside>
 

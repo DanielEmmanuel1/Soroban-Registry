@@ -2043,3 +2043,74 @@ pub struct ContractChangelogResponse {
     pub contract_id: Uuid,
     pub entries: Vec<ContractChangelogEntry>,
 }
+// ────────────────────────────────────────────────────────────────────────────
+// ADVANCED SEARCH & FAVORITE SEARCHES (Issue #51)
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Core logical operators for combining search criteria
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[serde(rename_all = "uppercase")]
+pub enum QueryOperator {
+    And,
+    Or,
+}
+
+/// Operators for individual field comparisons
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum FieldOperator {
+    Eq,
+    Ne,
+    Gt,
+    Lt,
+    In,
+    Contains,
+    StartsWith,
+}
+
+/// A single search criterion (e.g. "name contains 'token'")
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct QueryCondition {
+    pub field: String,
+    pub operator: FieldOperator,
+    pub value: serde_json::Value,
+}
+
+/// Recursive node in the query tree
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(untagged)]
+pub enum QueryNode {
+    Condition(QueryCondition),
+    Group {
+        operator: QueryOperator,
+        conditions: Vec<QueryNode>,
+    },
+}
+
+/// Request body for POST /api/contracts/search
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct AdvancedSearchRequest {
+    pub query: QueryNode,
+    pub sort_by: Option<SortBy>,
+    pub sort_order: Option<SortOrder>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+/// Stored favorite search record
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, utoipa::ToSchema)]
+pub struct FavoriteSearch {
+    pub id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub name: String,
+    pub query_json: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Request to save a favorite search
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct SaveFavoriteSearchRequest {
+    pub name: String,
+    pub query: QueryNode,
+}

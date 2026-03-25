@@ -20,6 +20,8 @@ use shared::{
     InteractionsListResponse, InteractionsQueryParams, InteractorStats, Network, NetworkConfig,
     PaginatedResponse, PublishRequest, Publisher, SemVer, TimelineEntry, TopUser, TrendingParams,
     UpdateContractMetadataRequest, UpdateContractStatusRequest, VerifyRequest,
+    AdvancedSearchRequest, FavoriteSearch, QueryNode, QueryOperator, FieldOperator, QueryCondition,
+    SaveFavoriteSearchRequest,
 };
 use std::time::Duration;
 use uuid::Uuid;
@@ -3073,4 +3075,263 @@ mod tests {
         assert_eq!(new["verification_id"], "abc123");
         assert_eq!(new["_ip_address"], "unknown");
     }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ADVANCED SEARCH (Issue #51)
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Advanced contract search using a recursive Query DSL
+#[utoipa::path(
+    post,
+    path = "/api/contracts/search",
+    request_body = AdvancedSearchRequest,
+    responses(
+        (status = 200, description = "Search results", body = PaginatedResponse<Contract>),
+        (status = 400, description = "Invalid query DSL")
+    ),
+    tag = "Contracts"
+)]
+pub async fn advanced_search_contracts(
+    State(state): State<AppState>,
+    ValidatedJson(req): ValidatedJson<AdvancedSearchRequest>,
+) -> ApiResult<Json<PaginatedResponse<Contract>>> {
+    let limit = req.limit.unwrap_or(20).clamp(1, 100);
+    let offset = req.offset.unwrap_or(0).max(0);
+    let page = (offset / limit) + 1;
+
+    let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Postgres> =
+        sqlx::QueryBuilder::new("SELECT c.* FROM contracts c ");
+    
+    // Add joins for sorting/filtering if needed
+    query_builder.push("LEFT JOIN contract_interactions ci ON c.id = ci.contract_id ");
+    query_builder.push("LEFT JOIN contract_versions cv ON c.id = cv.contract_id ");
+    query_builder.push("WHERE 1=1 ");
+
+    // Recursively build the WHERE clause
+    build_where_clause(&mut query_builder, &req.query)?;
+
+    query_builder.push(" GROUP BY c.id ");
+
+    // Sorting
+    let sort_by = req.sort_by.unwrap_or(shared::SortBy::CreatedAt);
+    let sort_order = req.sort_order.unwrap_or(shared::SortOrder::Desc);
+    let direction = if sort_order == shared::SortOrder::Asc { "ASC" } else { "DESC" };
+
+    query_builder.push(" ORDER BY ");
+    match sort_by {
+        shared::SortBy::CreatedAt => { query_builder.push("c.created_at "); },
+        shared::SortBy::UpdatedAt => { query_builder.push("c.updated_at "); },
+        shared::SortBy::Popularity | shared::SortBy::Interactions => {
+            query_builder.push("COUNT(DISTINCT ci.id) ");
+        },
+        shared::SortBy::Deployments => {
+            query_builder.push("COUNT(DISTINCT cv.id) ");
+        },
+        shared::SortBy::Relevance => {
+            query_builder.push("c.created_at "); // Default relevance if no query term
+        },
+        _ => { query_builder.push("c.created_at "); }
+    }
+    query_builder.push(direction);
+    query_builder.push(", c.id DESC ");
+
+    // Pagination
+    query_builder.push(" LIMIT ");
+    query_builder.push_bind(limit);
+    query_builder.push(" OFFSET ");
+    query_builder.push_bind(offset);
+
+    let query = query_builder.build_query_as::<Contract>();
+    let contracts = query.fetch_all(&state.db).await
+        .map_err(|err| db_internal_error("advanced search contracts", err))?;
+
+    // Count total matches (naively for now, same filters)
+    let mut count_builder: sqlx::QueryBuilder<'_, sqlx::Postgres> =
+        sqlx::QueryBuilder::new("SELECT COUNT(DISTINCT c.id) FROM contracts c ");
+    count_builder.push("WHERE 1=1 ");
+    build_where_clause(&mut count_builder, &req.query)?;
+
+    let total: i64 = count_builder.build_query_scalar().fetch_one(&state.db).await
+        .map_err(|err| db_internal_error("count advanced search", err))?;
+
+    Ok(Json(PaginatedResponse::new(contracts, total, page, limit)))
+}
+
+fn build_where_clause<'a>(
+    builder: &mut sqlx::QueryBuilder<'a, sqlx::Postgres>,
+    node: &'a QueryNode,
+) -> ApiResult<()> {
+    match node {
+        QueryNode::Condition(cond) => {
+            builder.push(" AND ");
+            apply_condition(builder, cond)?;
+        }
+        QueryNode::Group { operator, conditions } => {
+            if conditions.is_empty() { return Ok(()); }
+            builder.push(" AND (");
+            for (i, child) in conditions.iter().enumerate() {
+                if i > 0 {
+                    match operator {
+                        QueryOperator::And => builder.push(" AND "),
+                        QueryOperator::Or => builder.push(" OR "),
+                    };
+                }
+                
+                // For groups we need to wrap children
+                match child {
+                    QueryNode::Condition(c) => apply_condition(builder, c)?,
+                    QueryNode::Group { .. } => {
+                        builder.push(" (1=1 ");
+                        build_where_clause(builder, child)?;
+                        builder.push(") ");
+                    }
+                }
+            }
+            builder.push(") ");
+        }
+    }
+    Ok(())
+}
+
+fn apply_condition<'a>(
+    builder: &mut sqlx::QueryBuilder<'a, sqlx::Postgres>,
+    cond: &'a QueryCondition,
+) -> ApiResult<()> {
+    let field = match cond.field.as_str() {
+        "name" => "c.name",
+        "description" => "c.description",
+        "category" => "c.category",
+        "network" => "c.network",
+        "verified" => "c.is_verified",
+        "publisher" => "c.publisher_id",
+        _ => return Err(ApiError::bad_request("InvalidField", format!("Field '{}' is not searchable", cond.field))),
+    };
+
+    builder.push(field);
+    match cond.operator {
+        FieldOperator::Eq => {
+            builder.push(" = ");
+            builder.push_bind(cond.value.as_str().unwrap_or_default());
+        }
+        FieldOperator::Ne => {
+            builder.push(" != ");
+            builder.push_bind(cond.value.as_str().unwrap_or_default());
+        }
+        FieldOperator::Gt => {
+            builder.push(" > ");
+            builder.push_bind(cond.value.as_str().unwrap_or_default());
+        }
+        FieldOperator::Lt => {
+            builder.push(" < ");
+            builder.push_bind(cond.value.as_str().unwrap_or_default());
+        }
+        FieldOperator::In => {
+            builder.push(" IN (");
+            if let Some(arr) = cond.value.as_array() {
+                let mut separated = builder.separated(", ");
+                for val in arr {
+                    separated.push_bind(val.as_str().unwrap_or_default());
+                }
+            }
+            builder.push(")");
+        }
+        FieldOperator::Contains => {
+            builder.push(" ILIKE ");
+            let val = format!("%{}%", cond.value.as_str().unwrap_or_default());
+            builder.push_bind(val);
+        }
+        FieldOperator::StartsWith => {
+            builder.push(" ILIKE ");
+            let val = format!("{}%", cond.value.as_str().unwrap_or_default());
+            builder.push_bind(val);
+        }
+    }
+    Ok(())
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// FAVORITE SEARCHES (Issue #51)
+// ────────────────────────────────────────────────────────────────────────────
+
+/// List favorite searches for the current user
+#[utoipa::path(
+    get,
+    path = "/api/favorites/search",
+    responses(
+        (status = 200, description = "List of favorite searches", body = [FavoriteSearch])
+    ),
+    tag = "Favorites"
+)]
+pub async fn list_favorite_searches(
+    State(state): State<AppState>,
+) -> ApiResult<Json<Vec<FavoriteSearch>>> {
+    // For now, return all since we don't have a strict user_id auth yet
+    let favorites: Vec<FavoriteSearch> = sqlx::query_as("SELECT * FROM favorite_searches ORDER BY created_at DESC")
+        .fetch_all(&state.db)
+        .await
+        .map_err(|err| db_internal_error("list favorite searches", err))?;
+
+    Ok(Json(favorites))
+}
+
+/// Save a new favorite search
+#[utoipa::path(
+    post,
+    path = "/api/favorites/search",
+    request_body = SaveFavoriteSearchRequest,
+    responses(
+        (status = 201, description = "Favorite search saved", body = FavoriteSearch)
+    ),
+    tag = "Favorites"
+)]
+pub async fn save_favorite_search(
+    State(state): State<AppState>,
+    ValidatedJson(req): ValidatedJson<SaveFavoriteSearchRequest>,
+) -> ApiResult<Json<FavoriteSearch>> {
+    let query_json = serde_json::to_value(&req.query)
+        .map_err(|e| ApiError::bad_request("InvalidQuery", format!("Failed to serialize query: {}", e)))?;
+
+    let favorite: FavoriteSearch = sqlx::query_as(
+        "INSERT INTO favorite_searches (name, query_json) VALUES ($1, $2) RETURNING *"
+    )
+    .bind(&req.name)
+    .bind(query_json)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|err| db_internal_error("save favorite search", err))?;
+
+    Ok(Json(favorite))
+}
+
+/// Delete a favorite search
+#[utoipa::path(
+    delete,
+    path = "/api/favorites/search/{id}",
+    params(
+        ("id" = String, Path, description = "Favorite search ID")
+    ),
+    responses(
+        (status = 204, description = "Favorite search deleted"),
+        (status = 404, description = "Favorite search not found")
+    ),
+    tag = "Favorites"
+)]
+pub async fn delete_favorite_search(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> ApiResult<StatusCode> {
+    let uuid = Uuid::parse_str(&id).map_err(|_| ApiError::bad_request("InvalidId", "Invalid favorite search ID format"))?;
+
+    let result = sqlx::query("DELETE FROM favorite_searches WHERE id = $1")
+        .bind(uuid)
+        .execute(&state.db)
+        .await
+        .map_err(|err| db_internal_error("delete favorite search", err))?;
+
+    if result.rows_affected() == 0 {
+        return Err(ApiError::not_found("FavoriteNotFound", "Favorite search not found"));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }

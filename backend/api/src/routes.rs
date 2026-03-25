@@ -33,6 +33,10 @@ pub fn contract_routes() -> Router<AppState> {
             get(handlers::list_contracts).post(handlers::publish_contract),
         )
         .route(
+            "/api/contracts/search",
+            post(handlers::advanced_search_contracts),
+        )
+        .route(
             "/api/contracts/trending",
             get(handlers::get_trending_contracts),
         )
@@ -184,6 +188,7 @@ pub fn contract_routes() -> Router<AppState> {
             "/api/contracts/simulate-deploy",
             post(simulation_handlers::simulate_deploy),
         )
+        .merge(favorite_routes())
 }
 
 #[cfg(not(feature = "openapi"))]
@@ -205,6 +210,18 @@ pub fn publisher_routes() -> Router<AppState> {
         .route(
             "/api/publishers/:id/contracts",
             get(handlers::get_publisher_contracts),
+        )
+}
+
+pub fn favorite_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/favorites/search",
+            get(handlers::list_favorite_searches).post(handlers::save_favorite_search),
+        )
+        .route(
+            "/api/favorites/search/:id",
+            delete(handlers::delete_favorite_search),
         )
 }
 

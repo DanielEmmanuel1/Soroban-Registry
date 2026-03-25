@@ -1074,6 +1074,47 @@ export const api = {
       `/api/admin/migrations/${version}/rollback`
     );
   },
+
+  // Advanced Search (Issue #51)
+  async advancedSearchContracts(
+    req: AdvancedSearchRequest
+  ): Promise<PaginatedResponse<Contract>> {
+    return handleApiCall<PaginatedResponse<Contract>>(
+      () => fetch(`${API_URL}/api/contracts/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+      }),
+      '/api/contracts/search'
+    );
+  },
+
+  async listFavoriteSearches(): Promise<FavoriteSearch[]> {
+    return handleApiCall<FavoriteSearch[]>(
+      () => fetch(`${API_URL}/api/favorites/search`),
+      '/api/favorites/search'
+    );
+  },
+
+  async saveFavoriteSearch(req: SaveFavoriteSearchRequest): Promise<FavoriteSearch> {
+    return handleApiCall<FavoriteSearch>(
+      () => fetch(`${API_URL}/api/favorites/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+      }),
+      '/api/favorites/search'
+    );
+  },
+
+  async deleteFavoriteSearch(id: string): Promise<void> {
+    const response = await fetch(`${API_URL}/api/favorites/search/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to delete favorite search: ${response.statusText}`);
+    }
+  },
 };
 
 export interface Template {
@@ -1349,4 +1390,41 @@ export interface FormalVerificationReport {
 export interface RunVerificationRequest {
   properties_file: string;
   verifier_version?: string;
+}
+
+// ─── Advanced Search & Favorites (Issue #51) ─────────────────────────────────
+
+export type QueryOperator = 'AND' | 'OR';
+export type FieldOperator = 'eq' | 'ne' | 'gt' | 'lt' | 'in' | 'contains' | 'starts_with';
+
+export interface QueryCondition {
+  field: string;
+  operator: FieldOperator;
+  value: any;
+}
+
+export type QueryNode = 
+  | QueryCondition 
+  | { operator: QueryOperator; conditions: QueryNode[] };
+
+export interface AdvancedSearchRequest {
+  query: QueryNode;
+  sort_by?: ContractSearchParams['sort_by'];
+  sort_order?: ContractSearchParams['sort_order'];
+  limit?: number;
+  offset?: number;
+}
+
+export interface FavoriteSearch {
+  id: string;
+  user_id?: string;
+  name: string;
+  query_json: QueryNode;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SaveFavoriteSearchRequest {
+  name: string;
+  query: QueryNode;
 }
