@@ -196,9 +196,10 @@ pub fn openapi_routes() -> Router<AppState> {
     use axum::response::IntoResponse;
     Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", openapi::ApiDoc::openapi()))
-        .route("/openapi.json", get(|| async { 
-            axum::Json(openapi::ApiDoc::openapi()).into_response() 
-        }))
+        .route(
+            "/openapi.json",
+            get(|| async { axum::Json(openapi::ApiDoc::openapi()).into_response() }),
+        )
 }
 
 pub fn publisher_routes() -> Router<AppState> {
