@@ -19,7 +19,7 @@ use shared::{
     DeploymentStats, InteractionTimeSeriesPoint, InteractionTimeSeriesResponse,
     InteractionsListResponse, InteractionsQueryParams, InteractorStats, Network, NetworkConfig,
     PaginatedResponse, PublishRequest, Publisher, SemVer, TimelineEntry, TopUser, TrendingParams,
-    UpdateContractMetadataRequest, UpdateContractStatusRequest, VerifyRequest,
+    UpdateContractMetadataRequest, UpdateContractStatusRequest, VerifyRequest, ContractDeployment,
 };
 use std::time::Duration;
 use uuid::Uuid;
@@ -2727,6 +2727,40 @@ pub async fn get_all_audit_logs(
     ),
     tag = "Deployments"
 )]
+#[utoipa::path(
+    get,
+    path = "/api/contracts/{id}/deployments",
+    params(
+        ("id" = String, Path, description = "Contract UUID")
+    ),
+    responses(
+        (status = 200, description = "List of contract deployments", body = [ContractDeployment]),
+        (status = 404, description = "Contract not found")
+    ),
+    tag = "Deployments"
+)]
+pub async fn get_contract_deployments(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> ApiResult<Json<Vec<ContractDeployment>>> {
+    let contract_uuid = Uuid::parse_str(&id).map_err(|_| {
+        ApiError::bad_request(
+            "InvalidContractId",
+            format!("Invalid contract ID format: {}", id),
+        )
+    })?;
+
+    let deployments: Vec<ContractDeployment> = sqlx::query_as(
+        "SELECT * FROM contract_deployments WHERE contract_id = $1 ORDER BY deployed_at DESC",
+    )
+    .bind(contract_uuid)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|err| db_internal_error("get contract deployments", err))?;
+
+    Ok(Json(deployments))
+}
+
 pub async fn get_deployment_status() -> impl IntoResponse {
     planned_not_implemented_response()
 }

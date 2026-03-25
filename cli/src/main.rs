@@ -81,8 +81,16 @@ pub enum Commands {
 
     /// Get detailed information about a contract
     Info {
-        /// Contract registry UUID (use --network for network-specific config)
+        /// Contract registry identifier (UUID, contract address, or name)
         contract_id: String,
+
+        /// Output format (text, json, yaml)
+        #[arg(long, short = 'f', default_value = "text")]
+        format: String,
+
+        /// Highlight a specific ABI method
+        #[arg(long)]
+        highlight_method: Option<String>,
     },
 
     /// Publish a new contract to the registry
@@ -937,9 +945,25 @@ async fn main() -> Result<()> {
             )
             .await?;
         }
-        Commands::Info { contract_id } => {
-            log::debug!("Command: info | contract_id={}", contract_id);
-            commands::info(&cli.api_url, &contract_id, cfg_network).await?;
+        Commands::Info {
+            contract_id,
+            format,
+            highlight_method,
+        } => {
+            log::debug!(
+                "Command: info | contract_id={} format={} highlight={:?}",
+                contract_id,
+                format,
+                highlight_method
+            );
+            commands::info(
+                &cli.api_url,
+                &contract_id,
+                &format,
+                highlight_method.as_deref(),
+                cfg_network,
+            )
+            .await?;
         }
         Commands::Publish {
             contract_id,

@@ -168,6 +168,10 @@ pub fn contract_routes() -> Router<AppState> {
             post(compatibility_testing_handlers::mark_notifications_read),
         )
         .route(
+            "/api/contracts/:id/deployments",
+            get(handlers::get_contract_deployments),
+        )
+        .route(
             "/api/contracts/:id/deployments/status",
             get(handlers::get_deployment_status),
         )
