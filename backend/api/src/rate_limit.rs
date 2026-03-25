@@ -302,6 +302,8 @@ pub async fn rate_limit_middleware(
     let decision = rate_limiter.check_request(ip, endpoint_key, limit).await;
 
     if !decision.allowed {
+        let correlation_id = crate::request_tracing::current_request_id()
+            .unwrap_or_else(crate::request_tracing::generate_request_id);
         let mut response = (
             StatusCode::TOO_MANY_REQUESTS,
             Json(json!({
@@ -309,10 +311,11 @@ pub async fn rate_limit_middleware(
                 "message": "Too many requests. Please retry after the indicated time.",
                 "code": 429,
                 "timestamp": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                "correlation_id": uuid::Uuid::new_v4().to_string()
+                "correlation_id": correlation_id
             })),
         )
             .into_response();
+        crate::request_tracing::attach_request_id_headers(response.headers_mut(), &correlation_id);
         attach_rate_limit_headers(&mut response, &decision);
         response.headers_mut().insert(
             RETRY_AFTER,

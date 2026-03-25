@@ -1,11 +1,10 @@
 use axum::{
-    http::{header, HeaderValue, StatusCode},
+    http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use chrono::{SecondsFormat, Utc};
 use serde::Serialize;
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct ApiError {
@@ -69,7 +68,8 @@ impl ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let correlation_id = Uuid::new_v4().to_string();
+        let correlation_id = crate::request_tracing::current_request_id()
+            .unwrap_or_else(crate::request_tracing::generate_request_id);
         let payload = ErrorResponse {
             error: self.error,
             message: self.message,
@@ -79,11 +79,7 @@ impl IntoResponse for ApiError {
         };
 
         let mut response = (self.status, Json(payload)).into_response();
-        if let Ok(value) = HeaderValue::from_str(&correlation_id) {
-            response
-                .headers_mut()
-                .insert(header::HeaderName::from_static("x-correlation-id"), value);
-        }
+        crate::request_tracing::attach_request_id_headers(response.headers_mut(), &correlation_id);
         response
     }
 }

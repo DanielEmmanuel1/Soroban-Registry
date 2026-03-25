@@ -203,7 +203,16 @@ async fn main() -> Result<()> {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::AUTHORIZATION,
+            crate::request_tracing::X_REQUEST_ID.clone(),
+            crate::request_tracing::X_CORRELATION_ID.clone(),
+        ])
+        .expose_headers([
+            crate::request_tracing::X_REQUEST_ID.clone(),
+            crate::request_tracing::X_CORRELATION_ID.clone(),
+        ]);
 
     // Build router
     let app = Router::new()
@@ -222,7 +231,6 @@ async fn main() -> Result<()> {
         .merge(release_notes_routes::release_notes_routes())
         .nest("/api", activity_feed_routes::routes())
         .fallback(handlers::route_not_found)
-        .layer(middleware::from_fn(request_tracing::tracing_middleware))
         .layer(middleware::from_fn(
             validation::payload_size::payload_size_validation_middleware,
         ))
@@ -238,6 +246,7 @@ async fn main() -> Result<()> {
             rate_limit::rate_limit_middleware,
         ))
         .layer(cors)
+        .layer(middleware::from_fn(request_tracing::tracing_middleware))
         .with_state(state.clone());
 
     // Start server (port configurable via PORT env var, default 3001)

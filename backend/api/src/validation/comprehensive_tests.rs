@@ -483,7 +483,10 @@ mod tests {
             FieldError::new("name", "is required"),
         ];
 
-        let response = crate::validation::extractors::ValidationErrorResponse::new(errors);
+        let response = crate::validation::extractors::ValidationErrorResponse::new(
+            errors,
+            "test-correlation-id".to_string(),
+        );
         assert_eq!(response.error, "ValidationError");
         assert_eq!(response.code, 400);
         assert!(response.errors.len() == 2);
