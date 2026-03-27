@@ -1109,6 +1109,10 @@ export interface GraphEdge {
   source: string;
   target: string;
   dependency_type: string;
+  call_frequency?: number;
+  call_volume?: number;
+  is_estimated?: boolean;
+  is_circular?: boolean;
 }
 
 export interface GraphResponse {
