@@ -131,6 +131,26 @@ pub enum Commands {
         /// Publisher Stellar address
         #[arg(long)]
         publisher: String,
+
+        /// Path to contract project directory for preflight testing
+        #[arg(long, default_value = ".")]
+        contract_path: String,
+
+        /// Custom test command to run before submission
+        #[arg(long)]
+        test_command: Option<String>,
+
+        /// Require coverage data and fail if unavailable
+        #[arg(long)]
+        require_coverage: bool,
+
+        /// Minimum required coverage percentage (0-100)
+        #[arg(long, default_value_t = 0.0)]
+        coverage_threshold: f64,
+
+        /// Skip pre-submission contract tests
+        #[arg(long)]
+        skip_tests: bool,
     },
 
     /// List recent contracts
@@ -312,12 +332,18 @@ pub enum Commands {
 
     /// Run integration tests
     Test {
-        /// Path to test file (YAML or JSON)
-        test_file: String,
+        /// Optional path to scenario test file (YAML or JSON)
+        ///
+        /// If omitted, auto-detects and runs contract project tests.
+        test_file: Option<String>,
 
         /// Path to contract directory or file
         #[arg(long)]
         contract_path: Option<String>,
+
+        /// Custom test command (for auto-detected project tests mode)
+        #[arg(long)]
+        test_command: Option<String>,
 
         /// Output JUnit XML report
         #[arg(long)]
@@ -330,6 +356,14 @@ pub enum Commands {
         /// Verbose output
         #[arg(long, short)]
         verbose: bool,
+
+        /// Require coverage data and fail if unavailable
+        #[arg(long)]
+        require_coverage: bool,
+
+        /// Minimum required coverage percentage (0-100)
+        #[arg(long, default_value_t = 0.0)]
+        coverage_threshold: f64,
     },
 
     /// SLA compliance monitoring
@@ -1130,6 +1164,11 @@ async fn main() -> Result<()> {
             category,
             tags,
             publisher,
+            contract_path,
+            test_command,
+            require_coverage,
+            coverage_threshold,
+            skip_tests,
         } => {
             let tags_vec = tags
                 .map(|t| t.split(',').map(|s| s.trim().to_string()).collect())
@@ -1150,6 +1189,11 @@ async fn main() -> Result<()> {
                 tags_vec,
                 &publisher,
                 false,
+                &contract_path,
+                test_command.as_deref(),
+                require_coverage,
+                coverage_threshold,
+                skip_tests,
             )
             .await?;
         }
@@ -1485,18 +1529,32 @@ async fn main() -> Result<()> {
         Commands::Test {
             test_file,
             contract_path,
+            test_command,
             junit,
             coverage,
             verbose,
+            require_coverage,
+            coverage_threshold,
         } => {
-            commands::run_tests(
-                &test_file,
-                contract_path.as_deref(),
-                junit.as_deref(),
-                coverage,
-                verbose,
-            )
-            .await?;
+            if let Some(test_file) = test_file {
+                commands::run_tests(
+                    &test_file,
+                    contract_path.as_deref(),
+                    junit.as_deref(),
+                    coverage,
+                    verbose,
+                )
+                .await?;
+            } else {
+                commands::run_contract_tests(
+                    contract_path.as_deref().unwrap_or("."),
+                    test_command.as_deref(),
+                    require_coverage,
+                    coverage_threshold,
+                    coverage,
+                )
+                .await?;
+            }
         }
         Commands::Sla { action } => match action {
             SlaCommands::Record {
