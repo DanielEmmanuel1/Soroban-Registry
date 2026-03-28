@@ -14,11 +14,8 @@ import { Filter, Package, SlidersHorizontal, X, Search, Sparkles, CheckCircle, U
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import QueryBuilder from '@/components/contracts/QueryBuilder';
-import QuerySummary from '@/components/contracts/QuerySummary';
 import FavoriteSearches from '@/components/contracts/FavoriteSearches';
-import { useSearchUrlSync } from '@/hooks/useSearchUrlSync';
 import { QueryNode } from '@/lib/api';
-import { useMutation } from '@tanstack/react-query';
 
 const DEFAULT_PAGE_SIZE = 12;
 const CATEGORY_OPTIONS = [
@@ -138,7 +135,7 @@ function getInitialFilters(searchParams: URLSearchParams): ContractsUiFilters {
   const categories = parseCsvOrMulti(searchParams.getAll('category'));
   const languages = parseCsvOrMulti(searchParams.getAll('language'));
   const tags = parseCsvOrMulti(searchParams.getAll('tag'));
-  const parsedNetworks = parseCsvOrMulti(searchParams.getAll('network')).filter(
+  const networks = parseCsvOrMulti(searchParams.getAll('network')).filter(
     (network): network is NonNullable<ContractSearchParams['network']> =>
       network === 'mainnet' || network === 'testnet' || network === 'futurenet',
   );
@@ -205,7 +202,7 @@ export function ContractsContent() {
     placeholderData: (previousData) => previousData ?? EMPTY_CONTRACTS_RESPONSE,
   });
 
-  const data = useMemo(() => {
+  const effectiveData = useMemo(() => {
     const all = allContracts?.items ?? [];
 
     let filtered = all;
@@ -284,7 +281,7 @@ export function ContractsContent() {
   const isEmptyResult = (effectiveData?.total ?? 0) === 0;
   const paginationRange = useMemo(
     () => (effectiveData ? getPaginationRange(filters.page, effectiveData.total_pages) : []),
-    [filters.page, effectiveData],
+    [filters.page, effectiveData?.total_pages],
   );
 
   useEffect(() => {
@@ -423,7 +420,7 @@ export function ContractsContent() {
     }
 
     return chips;
-  }, [filters.query, filters]);
+  }, [filters]);
 
   const filterPanel = (
     <FilterPanel

@@ -4053,11 +4053,12 @@ pub async fn get_contract_deployments(
 
     // Resolve target UUIDs (across all networks if logical_id exists)
     let target_uuids = if let Some(uuid) = contract_uuid {
-        let logical_id: Option<Uuid> = sqlx::query_scalar("SELECT logical_id FROM contracts WHERE id = $1")
-            .bind(uuid)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|err| db_internal_error("get logical_id", err))?;
+        let logical_id: Option<Uuid> =
+            sqlx::query_scalar("SELECT logical_id FROM contracts WHERE id = $1")
+                .bind(uuid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|err| db_internal_error("get logical_id", err))?;
 
         if let Some(lid) = logical_id {
             sqlx::query_scalar("SELECT id FROM contracts WHERE logical_id = $1")
@@ -4074,11 +4075,12 @@ pub async fn get_contract_deployments(
             .await
             .map_err(|err| ApiError::not_found(format!("Contract {} not found: {}", id, err)))?;
 
-        let logical_id: Option<Uuid> = sqlx::query_scalar("SELECT logical_id FROM contracts WHERE id = $1")
-            .bind(uuid)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|err| db_internal_error("get logical_id", err))?;
+        let logical_id: Option<Uuid> =
+            sqlx::query_scalar("SELECT logical_id FROM contracts WHERE id = $1")
+                .bind(uuid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|err| db_internal_error("get logical_id", err))?;
 
         if let Some(lid) = logical_id {
             sqlx::query_scalar("SELECT id FROM contracts WHERE logical_id = $1")
@@ -4107,7 +4109,9 @@ pub async fn get_contract_deployments(
     );
 
     if let (Some(cached), true) = state.cache.get("contract", &cache_key).await {
-        if let Ok(response) = serde_json::from_str::<PaginatedResponse<ContractDeploymentHistory>>(&cached) {
+        if let Ok(response) =
+            serde_json::from_str::<PaginatedResponse<ContractDeploymentHistory>>(&cached)
+        {
             return Ok(Json(response));
         }
     }
@@ -4143,9 +4147,8 @@ pub async fn get_contract_deployments(
         .map_err(|err| db_internal_error("fetch deployment history", err))?;
 
     // Total count for pagination
-    let mut count_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::new(
-        "SELECT COUNT(*) FROM contract_interactions WHERE contract_id = ANY("
-    );
+    let mut count_builder: QueryBuilder<sqlx::Postgres> =
+        QueryBuilder::new("SELECT COUNT(*) FROM contract_interactions WHERE contract_id = ANY(");
     count_builder.push_bind(&target_uuids);
     count_builder.push(") AND interaction_type = cast('deploy' as text)");
 
@@ -4168,7 +4171,15 @@ pub async fn get_contract_deployments(
 
     // Cache the result
     if let Ok(serialized) = serde_json::to_string(&response) {
-        state.cache.put("contract", &cache_key, serialized, Some(std::time::Duration::from_secs(3600))).await;
+        state
+            .cache
+            .put(
+                "contract",
+                &cache_key,
+                serialized,
+                Some(std::time::Duration::from_secs(3600)),
+            )
+            .await;
     }
 
     Ok(Json(response))
