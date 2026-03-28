@@ -583,7 +583,6 @@ export function ContractsContent() {
             </div>
           </div>
         </div>
-      </div>
       </section>
 
       {/* Main content */}

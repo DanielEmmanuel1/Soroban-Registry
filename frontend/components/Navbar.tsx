@@ -73,8 +73,10 @@ function SearchModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 
     useEffect(() => {
         if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 100);
-            setQuery('');
+            setTimeout(() => {
+                inputRef.current?.focus();
+                setQuery('');
+            }, 0);
         }
     }, [isOpen]);
 
@@ -188,7 +190,7 @@ export default function Navbar() {
     const drawerRef      = useRef<HTMLDivElement>(null);
 
     // Close mobile menu on route change
-    useEffect(() => { setMobileOpen(false); }, [pathname]);
+    useEffect(() => { setTimeout(() => setMobileOpen(false), 0); }, [pathname]);
 
     // Prevent body scroll when mobile drawer open
     useEffect(() => {

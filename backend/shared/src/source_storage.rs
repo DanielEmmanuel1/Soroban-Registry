@@ -135,7 +135,7 @@ impl SourceStorage {
         source_bytes: &[u8],
     ) -> Result<(String, String, String), RegistryError> {
         let source_hash = compute_sha256(source_bytes);
-        let source_size = source_bytes.len() as i64;
+        let _source_size = source_bytes.len() as i64;
 
         let key = format!(
             "{}/{}/{}/{}.{}",
@@ -214,11 +214,11 @@ impl SourceStorage {
     }
 }
 
-impl SourceFormat {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for SourceFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SourceFormat::Rust => "rust".to_string(),
-            SourceFormat::Wasm => "wasm".to_string(),
+            SourceFormat::Rust => write!(f, "rust"),
+            SourceFormat::Wasm => write!(f, "wasm"),
         }
     }
 }

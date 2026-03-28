@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -59,19 +58,15 @@ pub struct Contract {
     pub visibility: VisibilityType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq, Default)]
 #[sqlx(type_name = "visibility_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum VisibilityType {
+    #[default]
     Public,
     Private,
 }
 
-impl Default for VisibilityType {
-    fn default() -> Self {
-        Self::Public
-    }
-}
 
 /// Response for GET /contracts/:id with optional network-specific slice (Issue #43)
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -284,20 +279,16 @@ pub enum VerificationStatus {
 }
 
 /// Security audit status of the contract (Issue #401)
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq, Default)]
 #[sqlx(type_name = "audit_status_type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AuditStatus {
+    #[default]
     None,
     Pending,
     Passed,
     Failed,
 }
 
-impl Default for AuditStatus {
-    fn default() -> Self {
-        Self::None
-    }
-}
 
 /// Contract maturity level - indicates stability and production readiness
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
