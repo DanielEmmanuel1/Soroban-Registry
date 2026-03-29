@@ -2,6 +2,8 @@ use moka::future::Cache as MokaCache;
 use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Duration;
+use redis::aio::ConnectionManager;
+
 
 /// Cache configuration options
 #[derive(Clone, Debug)]
@@ -125,9 +127,9 @@ impl CacheLayer {
             contract_access_cache,
             redis_cm,
             config,
-            redis_cm,
         }
     }
+
 
     pub fn config(&self) -> &CacheConfig {
         &self.config

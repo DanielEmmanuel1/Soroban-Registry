@@ -25,6 +25,7 @@ import {
   Code2,
   Layers,
   MessageSquare,
+  Share2,
 } from "lucide-react";
 import Link from "next/link";
 import { useCopy } from "@/hooks/useCopy";
@@ -40,10 +41,22 @@ import DeprecationBanner from "@/components/DeprecationBanner";
 import ReleaseNotesPanel from "@/components/ReleaseNotesPanel";
 import ContractComments from "@/components/ContractComments";
 import { useContractAutoRefresh } from "@/hooks/useContractAutoRefresh";
+import ContractInteractionFlow from "@/components/contracts/ContractInteractionFlow";
+
 
 const NETWORKS: Network[] = ["mainnet", "testnet", "futurenet"];
-const TAB_IDS = ["overview", "abi", "source", "deployments", "analytics", "history", "discussion"] as const;
+const TAB_IDS = [
+  "overview",
+  "interactions",
+  "abi",
+  "source",
+  "deployments",
+  "analytics",
+  "history",
+  "discussion",
+] as const;
 type TabId = (typeof TAB_IDS)[number];
+
 
 // TODO: Replace with real API call when maintenance endpoint is available
 const maintenanceStatus: { is_maintenance: boolean; current_window: null } = {
@@ -182,8 +195,12 @@ function ContractDetailsContent() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [tabSearch, setTabSearch] = useState("");
 
-  const tabMeta: Record<TabId, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  const tabMeta: Record<
+    TabId,
+    { label: string; icon: React.ComponentType<{ className?: string }> }
+  > = {
     overview: { label: "Overview", icon: Layers },
+    interactions: { label: "Interactions", icon: Share2 },
     abi: { label: "ABI", icon: Database },
     source: { label: "Source Code", icon: Code2 },
     deployments: { label: "Deployments", icon: Globe },
@@ -191,6 +208,7 @@ function ContractDetailsContent() {
     history: { label: "History", icon: History },
     discussion: { label: "Discussion", icon: MessageSquare },
   };
+
 
   // Subscribe to real-time contract updates
   useContractAutoRefresh(id);
@@ -487,30 +505,10 @@ function ContractDetailsContent() {
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              {depsLoading ? (
-                <section className="bg-card rounded-2xl p-8 border border-border">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-muted rounded w-1/3" />
-                    <div className="h-96 bg-muted rounded-lg" />
-                  </div>
-                </section>
-              ) : depGraph && depGraph.nodes.length > 0 ? (
-                <section className="bg-card rounded-2xl border border-border p-4 md:p-6">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Dependency Graph</h2>
-                  <div className="h-[520px]">
-                    <DependencyGraph nodes={depGraph.nodes} edges={depGraph.edges} searchQuery={tabSearch} />
-                  </div>
-                </section>
-              ) : (
-                <section className="bg-card rounded-2xl border border-border p-6">
-                  <h2 className="text-xl font-semibold text-foreground mb-2">Dependency Graph</h2>
-                  <p className="text-sm text-muted-foreground">No dependency graph available for this contract.</p>
-                </section>
-              )}
-
               <section>
                 <ExampleGallery contractId={contract.id} />
               </section>
+
             </div>
 
             <div className="space-y-6">
@@ -555,7 +553,26 @@ function ContractDetailsContent() {
           </div>
         )}
 
+        {activeTab === "interactions" && (
+          <div className="space-y-6">
+            <section className="bg-card rounded-2xl border border-border p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-semibold text-foreground">Interaction Flow Diagram</h2>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-primary/20 border border-primary/50" />
+                  <span>Interactive Flow</span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Explore the cross-contract call graph centered on this contract. Zoom, pan, and filter to understand complex relationships.
+              </p>
+              <ContractInteractionFlow contractId={id} />
+            </section>
+          </div>
+        )}
+
         {activeTab === "abi" && (
+
           <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
             <h2 className="text-xl font-semibold text-foreground">ABI</h2>
             {abiLoading ? (

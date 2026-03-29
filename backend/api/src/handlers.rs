@@ -3843,10 +3843,46 @@ pub async fn get_contract_graph(
             .await;
     }
 
+
     Ok(Json(graph))
 }
 
 #[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
+pub struct LocalGraphParams {
+    pub depth: Option<u32>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/contracts/{id}/graph",
+    responses(
+        (status = 200, description = "Localized interaction graph", body = GraphResponse)
+    ),
+    params(
+        ("id" = String, Path, description = "Contract identifier (UUID)"),
+        ("depth" = Option<u32>, Query, description = "Graph traversal depth (default 1, max 3)")
+    ),
+    tag = "Graphs"
+)]
+pub async fn get_contract_local_graph(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(params): Query<LocalGraphParams>,
+) -> ApiResult<Json<shared::GraphResponse>> {
+    let contract_uuid = Uuid::parse_str(&id)
+        .map_err(|_| ApiError::bad_request("InvalidContractId", format!("Invalid ID: {}", id)))?;
+
+    let depth = params.depth.unwrap_or(1).clamp(1, 3);
+
+    let graph = dependency::build_local_graph(&state.db, contract_uuid, depth)
+        .await
+        .map_err(|e| ApiError::internal(format!("Failed to build local graph: {}", e)))?;
+
+    Ok(Json(graph))
+}
+
+#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
+
 pub struct ImpactQuery {
     pub change: Option<String>,
 }

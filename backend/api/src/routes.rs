@@ -176,10 +176,16 @@ pub fn contract_routes() -> Router<AppState> {
             "/api/analytics/dashboard",
             get(analytics_handlers::get_analytics_summary),
         )
+
         .route(
             "/api/contracts/:id/dependencies",
             get(crate::dependency_handlers::get_contract_dependencies),
         )
+        .route(
+            "/api/contracts/:id/graph",
+            get(handlers::get_contract_local_graph),
+        )
+
         .route(
             "/api/contracts/:id/trust-score",
             get(handlers::get_trust_score),
