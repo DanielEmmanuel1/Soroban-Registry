@@ -1,7 +1,9 @@
 #![allow(unused_variables)]
 
 mod backup;
+mod batch_register;
 mod batch_verify;
+mod cicd;
 mod commands;
 mod config;
 mod contract_verify;
@@ -500,23 +502,19 @@ pub enum Commands {
         action: NetworkCommands,
     },
 
-    /// Track contract deployment progress and confirm it is live on-chain (#524)
-    TrackDeployment {
-        /// On-chain contract ID to track
+    /// Register multiple contracts from a YAML or JSON manifest file
+    BatchRegister {
+        /// Path to the manifest file (.yaml, .yml, or .json)
         #[arg(long)]
-        contract_id: String,
+        manifest: String,
 
-        /// Stellar network (mainnet | testnet | futurenet)
-        #[arg(long, default_value = "testnet")]
-        network: String,
-
-        /// Transaction hash of the deployment (optional — enables direct RPC/Horizon lookup)
+        /// Publisher Stellar address (overrides `publisher` field in the manifest)
         #[arg(long)]
-        tx_hash: Option<String>,
+        publisher: Option<String>,
 
-        /// Maximum seconds to wait for confirmation before timing out (exit code 2)
-        #[arg(long, default_value_t = 60)]
-        wait_timeout: u64,
+        /// Validate all entries and show what would be registered without submitting
+        #[arg(long)]
+        dry_run: bool,
 
         /// Output results as machine-readable JSON
         #[arg(long)]
@@ -579,7 +577,6 @@ pub enum ReleaseNotesCommands {
         #[arg(long)]
         json: bool,
     },
-
 
     /// Edit draft release notes before publishing
     Edit {
@@ -1752,10 +1749,16 @@ async fn main() -> Result<()> {
         },
         // ── Contract verify command (#522) ───────────────────────────────────
         Commands::Contract { action } => match action {
-            ContractCommands::Verify { address, network, json } => {
+            ContractCommands::Verify {
+                address,
+                network,
+                json,
+            } => {
                 log::debug!(
                     "Command: contract verify | address={} network={} json={}",
-                    address, network, json
+                    address,
+                    network,
+                    json
                 );
                 contract_verify::run(&cli.api_url, &address, &network, json).await?;
             }
@@ -1854,8 +1857,20 @@ async fn main() -> Result<()> {
                 auto_register,
                 json,
             } => {
-                log::debug!("Command: cicd run | path={} network={}", contract_path, network);
-                cicd::run_pipeline(&cli.api_url, &contract_path, &network, skip_scan, auto_register, json).await?;
+                log::debug!(
+                    "Command: cicd run | path={} network={}",
+                    contract_path,
+                    network
+                );
+                cicd::run_pipeline(
+                    &cli.api_url,
+                    &contract_path,
+                    &network,
+                    skip_scan,
+                    auto_register,
+                    json,
+                )
+                .await?;
             }
             CicdCommands::Validate { contract_path } => {
                 log::debug!("Command: cicd validate | path={}", contract_path);
@@ -1871,27 +1886,24 @@ async fn main() -> Result<()> {
             }
         },
 
-        // ── Track deployment command (issue #524) ────────────────────────────
-        Commands::TrackDeployment {
-            contract_id,
-            network: net_str,
-            tx_hash,
-            wait_timeout,
+        // ── Bulk contract registration (issue #525) ──────────────────────────
+        Commands::BatchRegister {
+            manifest,
+            publisher,
+            dry_run,
             json,
         } => {
             log::debug!(
-                "Command: track-deployment | contract_id={} network={} tx_hash={:?} timeout={}",
-                contract_id,
-                net_str,
-                tx_hash,
-                wait_timeout
+                "Command: batch-register | manifest={} dry_run={} publisher={:?}",
+                manifest,
+                dry_run,
+                publisher
             );
-            track_deployment::run(
+            batch_register::run_batch_register(
                 &cli.api_url,
-                &contract_id,
-                &net_str,
-                tx_hash.as_deref(),
-                wait_timeout,
+                &manifest,
+                publisher.as_deref(),
+                dry_run,
                 json,
             )
             .await?;

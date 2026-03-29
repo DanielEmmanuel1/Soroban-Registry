@@ -1,3 +1,5 @@
+pub mod reviews;
+
 use crate::validation::extractors::ValidatedJson;
 use axum::{
     extract::{
@@ -1698,6 +1700,293 @@ pub async fn get_contract_versions(
     Ok(Json(versions))
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/contracts/:id/versions/:version  (Issue #486)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[utoipa::path(
+    get,
+    path = "/api/contracts/{id}/versions/{version}",
+    params(
+        ("id" = String, Path, description = "Contract UUID or on-chain contract_id"),
+        ("version" = String, Path, description = "Semantic version string (e.g. 1.2.3)")
+    ),
+    responses(
+        (status = 200, description = "Version details", body = ContractVersion),
+        (status = 400, description = "Invalid contract ID"),
+        (status = 404, description = "Version not found")
+    ),
+    tag = "Versions"
+)]
+pub async fn get_specific_contract_version(
+    State(state): State<AppState>,
+    Path((id, version)): Path<(String, String)>,
+) -> ApiResult<Json<ContractVersion>> {
+    let (contract_uuid, _) = fetch_contract_identity(&state, &id).await?;
+
+    let version_row: Option<ContractVersion> = sqlx::query_as(
+        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
+    )
+    .bind(contract_uuid)
+    .bind(&version)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|err| db_internal_error("get specific contract version", err))?;
+
+    version_row.map(Json).ok_or_else(|| {
+        ApiError::not_found(
+            "VersionNotFound",
+            format!("Version '{}' not found for contract {}", version, id),
+        )
+    })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/contracts/:id/versions/compare?from=v1&to=v2  (Issue #486)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
+pub struct VersionCompareQuery {
+    /// The base version to compare from
+    pub from: String,
+    /// The target version to compare to
+    pub to: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/contracts/{id}/versions/compare",
+    params(
+        ("id" = String, Path, description = "Contract UUID or on-chain contract_id"),
+        VersionCompareQuery
+    ),
+    responses(
+        (status = 200, description = "Version comparison result", body = shared::VersionCompareResponse),
+        (status = 400, description = "Invalid contract ID or missing query params"),
+        (status = 404, description = "One or both versions not found")
+    ),
+    tag = "Versions"
+)]
+pub async fn compare_contract_versions(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(params): Query<VersionCompareQuery>,
+) -> ApiResult<Json<shared::VersionCompareResponse>> {
+    let (contract_uuid, _) = fetch_contract_identity(&state, &id).await?;
+
+    let from_row: Option<ContractVersion> = sqlx::query_as(
+        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
+    )
+    .bind(contract_uuid)
+    .bind(&params.from)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|err| db_internal_error("fetch from-version for compare", err))?;
+
+    let from_row = from_row.ok_or_else(|| {
+        ApiError::not_found(
+            "VersionNotFound",
+            format!("Version '{}' not found for contract {}", params.from, id),
+        )
+    })?;
+
+    let to_row: Option<ContractVersion> = sqlx::query_as(
+        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
+    )
+    .bind(contract_uuid)
+    .bind(&params.to)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|err| db_internal_error("fetch to-version for compare", err))?;
+
+    let to_row = to_row.ok_or_else(|| {
+        ApiError::not_found(
+            "VersionNotFound",
+            format!("Version '{}' not found for contract {}", params.to, id),
+        )
+    })?;
+
+    let wasm_changed = from_row.wasm_hash != to_row.wasm_hash;
+
+    let mut differences: Vec<shared::VersionFieldDiff> = Vec::new();
+
+    if from_row.wasm_hash != to_row.wasm_hash {
+        differences.push(shared::VersionFieldDiff {
+            field: "wasm_hash".to_string(),
+            from_value: Some(json!(from_row.wasm_hash)),
+            to_value: Some(json!(to_row.wasm_hash)),
+        });
+    }
+    if from_row.source_url != to_row.source_url {
+        differences.push(shared::VersionFieldDiff {
+            field: "source_url".to_string(),
+            from_value: from_row.source_url.as_ref().map(|v| json!(v)),
+            to_value: to_row.source_url.as_ref().map(|v| json!(v)),
+        });
+    }
+    if from_row.commit_hash != to_row.commit_hash {
+        differences.push(shared::VersionFieldDiff {
+            field: "commit_hash".to_string(),
+            from_value: from_row.commit_hash.as_ref().map(|v| json!(v)),
+            to_value: to_row.commit_hash.as_ref().map(|v| json!(v)),
+        });
+    }
+    if from_row.release_notes != to_row.release_notes {
+        differences.push(shared::VersionFieldDiff {
+            field: "release_notes".to_string(),
+            from_value: from_row.release_notes.as_ref().map(|v| json!(v)),
+            to_value: to_row.release_notes.as_ref().map(|v| json!(v)),
+        });
+    }
+    if from_row.change_notes != to_row.change_notes {
+        differences.push(shared::VersionFieldDiff {
+            field: "change_notes".to_string(),
+            from_value: from_row.change_notes.as_ref().map(|v| json!(v)),
+            to_value: to_row.change_notes.as_ref().map(|v| json!(v)),
+        });
+    }
+
+    Ok(Json(shared::VersionCompareResponse {
+        contract_id: contract_uuid,
+        from_version: from_row,
+        to_version: to_row,
+        differences,
+        wasm_changed,
+    }))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/contracts/:id/versions/:version/revert  (Issue #486)
+// Admin-only: revert a contract to a previous version by creating a new version
+// that carries the same wasm_hash as the target, marked as a revert.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[utoipa::path(
+    post,
+    path = "/api/admin/contracts/{id}/versions/{version}/revert",
+    params(
+        ("id" = String, Path, description = "Contract UUID or on-chain contract_id"),
+        ("version" = String, Path, description = "Version to revert to")
+    ),
+    request_body = shared::RevertVersionRequest,
+    responses(
+        (status = 201, description = "Revert version created", body = ContractVersion),
+        (status = 400, description = "Invalid input"),
+        (status = 404, description = "Contract or version not found")
+    ),
+    tag = "Versions"
+)]
+pub async fn revert_contract_version(
+    State(state): State<AppState>,
+    Path((id, target_version)): Path<(String, String)>,
+    headers: HeaderMap,
+    Json(req): Json<shared::RevertVersionRequest>,
+) -> ApiResult<Json<ContractVersion>> {
+    let (contract_uuid, contract_id) = fetch_contract_identity(&state, &id).await?;
+
+    // Fetch the version we are reverting to.
+    let target: Option<ContractVersion> = sqlx::query_as(
+        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
+    )
+    .bind(contract_uuid)
+    .bind(&target_version)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|err| db_internal_error("fetch target version for revert", err))?;
+
+    let target = target.ok_or_else(|| {
+        ApiError::not_found(
+            "VersionNotFound",
+            format!(
+                "Version '{}' not found for contract {}",
+                target_version, contract_id
+            ),
+        )
+    })?;
+
+    // Determine the current latest version so we can compute the next patch bump.
+    let existing_versions: Vec<String> =
+        sqlx::query_scalar("SELECT version FROM contract_versions WHERE contract_id = $1")
+            .bind(contract_uuid)
+            .fetch_all(&state.db)
+            .await
+            .map_err(|err| db_internal_error("fetch versions for revert bump", err))?;
+
+    let new_version = {
+        let mut parsed: Vec<SemVer> = existing_versions
+            .iter()
+            .filter_map(|v| SemVer::parse(v))
+            .collect();
+        parsed.sort();
+        match parsed.last() {
+            Some(latest) => {
+                // Bump the patch component of the latest version.
+                format!("{}.{}.{}", latest.major, latest.minor, latest.patch + 1)
+            }
+            None => "0.0.1".to_string(),
+        }
+    };
+
+    let change_notes = req.change_notes.unwrap_or_else(|| {
+        format!("Reverted to version {}", target_version)
+    });
+
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(|err| db_internal_error("begin revert transaction", err))?;
+
+    let version_row: ContractVersion = sqlx::query_as(
+        "INSERT INTO contract_versions \
+            (contract_id, version, wasm_hash, source_url, commit_hash, release_notes, change_notes, is_revert, reverted_from) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8) \
+         RETURNING *",
+    )
+    .bind(contract_uuid)
+    .bind(&new_version)
+    .bind(&target.wasm_hash)
+    .bind(&target.source_url)
+    .bind(&target.commit_hash)
+    .bind(Option::<String>::None) // release_notes left empty for reverts
+    .bind(&change_notes)
+    .bind(&target_version)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|err| db_internal_error("insert revert version", err))?;
+
+    sqlx::query("UPDATE contracts SET current_version = $2 WHERE id = $1")
+        .bind(contract_uuid)
+        .bind(&new_version)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| db_internal_error("update current_version on revert", err))?;
+
+    tx.commit()
+        .await
+        .map_err(|err| db_internal_error("commit revert transaction", err))?;
+
+    write_contract_audit_log(
+        &state.db,
+        AuditActionType::Rollback,
+        contract_uuid,
+        req.admin_id,
+        json!({
+            "reverted_to_version": target_version,
+            "new_version": new_version,
+            "change_notes": change_notes
+        }),
+        &extract_ip_address(&headers),
+    )
+    .await
+    .map_err(|err| db_internal_error("write revert audit log", err))?;
+
+    state.cache.invalidate_abi(&contract_id).await;
+    state.cache.invalidate_abi(&contract_uuid.to_string()).await;
+
+    Ok(Json(version_row))
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct UploadContractSourceRequest {
     pub source_base64: String,
@@ -2266,6 +2555,9 @@ pub async fn create_contract_version(
             .await
             .map_err(|err| db_internal_error("fetch contract versions", err))?;
 
+    // prev_snapshot is populated when there is a prior version; used for delta storage.
+    let mut prev_snapshot: Option<crate::patch_handlers::VersionSnapshot> = None;
+
     if !existing_versions.is_empty() {
         let mut parsed: Vec<SemVer> = Vec::with_capacity(existing_versions.len());
         for version in &existing_versions {
@@ -2307,6 +2599,41 @@ pub async fn create_contract_version(
                     ),
                 ));
             }
+
+            // Fetch the previous version row for delta computation.
+            let old_ver_str = old_version.to_string();
+            #[derive(sqlx::FromRow)]
+            struct PrevRow {
+                wasm_hash: String,
+                source_url: Option<String>,
+                commit_hash: Option<String>,
+                release_notes: Option<String>,
+                state_schema: Option<serde_json::Value>,
+            }
+            let prev_row: Option<PrevRow> = sqlx::query_as(
+                "SELECT wasm_hash, source_url, commit_hash, release_notes, state_schema \
+                 FROM contract_versions \
+                 WHERE contract_id = $1 AND version = $2",
+            )
+            .bind(contract_uuid)
+            .bind(&old_ver_str)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|err| db_internal_error("fetch previous version for patch", err))?;
+
+            if let Some(pr) = prev_row {
+                let old_abi_json: serde_json::Value =
+                    serde_json::from_str(&old_abi).unwrap_or(serde_json::Value::Null);
+                prev_snapshot = Some(crate::patch_handlers::VersionSnapshot {
+                    version: old_ver_str,
+                    wasm_hash: pr.wasm_hash,
+                    source_url: pr.source_url,
+                    commit_hash: pr.commit_hash,
+                    release_notes: pr.release_notes,
+                    state_schema: pr.state_schema,
+                    abi: old_abi_json,
+                });
+            }
         }
     }
 
@@ -2318,8 +2645,8 @@ pub async fn create_contract_version(
 
     let version_row: ContractVersion = sqlx::query_as(
         "INSERT INTO contract_versions \
-            (contract_id, version, wasm_hash, source_url, commit_hash, release_notes, signature, publisher_key, signature_algorithm) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+            (contract_id, version, wasm_hash, source_url, commit_hash, release_notes, change_notes, signature, publisher_key, signature_algorithm) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
          RETURNING *",
     )
     .bind(contract_uuid)
@@ -2328,6 +2655,7 @@ pub async fn create_contract_version(
     .bind(&req.source_url)
     .bind(&req.commit_hash)
     .bind(&req.release_notes)
+    .bind(&req.change_notes)
     .bind(&version_signature)
     .bind(&version_publisher_key)
     .bind(&version_algorithm)
@@ -2356,11 +2684,14 @@ pub async fn create_contract_version(
     .await
     .map_err(|err| db_internal_error("insert contract abi", err))?;
 
-    sqlx::query("UPDATE contracts SET deployment_count = deployment_count + 1 WHERE id = $1")
-        .bind(contract_uuid)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| db_internal_error("increment deployment count", err))?;
+    sqlx::query(
+        "UPDATE contracts SET deployment_count = deployment_count + 1, current_version = $2 WHERE id = $1",
+    )
+    .bind(contract_uuid)
+    .bind(&req.version)
+    .execute(&mut *tx)
+    .await
+    .map_err(|err| db_internal_error("update current_version", err))?;
 
     tx.commit()
         .await
@@ -2372,6 +2703,27 @@ pub async fn create_contract_version(
         .cache
         .invalidate_abi(&format!("{}@{}", contract_id, req.version))
         .await;
+
+    // Store differential patch for the new version (Issue #501).
+    let new_snapshot = crate::patch_handlers::VersionSnapshot {
+        version: req.version.clone(),
+        wasm_hash: req.wasm_hash.clone(),
+        source_url: req.source_url.clone(),
+        commit_hash: req.commit_hash.clone(),
+        release_notes: req.release_notes.clone(),
+        state_schema: None,
+        abi: req.abi.clone(),
+    };
+    if let Err(e) = crate::patch_handlers::store_patch(
+        &state.db,
+        contract_uuid,
+        prev_snapshot.as_ref(),
+        &new_snapshot,
+    )
+    .await
+    {
+        tracing::error!("Failed to store differential patch for version {}: {}", req.version, e);
+    }
 
     // Post-commit dependency analysis
     let detected_deps = dependency::detect_dependencies_from_abi(&req.abi);
@@ -4020,17 +4372,6 @@ pub async fn get_all_audit_logs(
     Ok(Json(logs))
 }
 
-#[utoipa::path(
-    get,
-    path = "/api/contracts/{id}/deployments/status",
-    params(
-        ("id" = String, Path, description = "Contract UUID")
-    ),
-    responses(
-        (status = 200, description = "Current deployment status", body = Object)
-    ),
-    tag = "Deployments"
-)]
 #[utoipa::path(
     get,
     path = "/api/contracts/{id}/deployments",
