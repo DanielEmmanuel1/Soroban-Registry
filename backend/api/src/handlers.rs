@@ -16,18 +16,16 @@ use once_cell::sync::Lazy;
 use serde_json::{json, Value};
 use shared::{
     pagination::Cursor, AdvancedSearchRequest, AnalyticsEventType, AuditActionType,
-    ChangePublisherRequest, Contract, ContractAuditLog,
-    ContractChangelogEntry, ContractChangelogResponse, ContractGetResponse,
-    ContractDeployment, ContractInteractionResponse, ContractSearchParams, ContractSource,
-    ContractVersion,
+    ChangePublisherRequest, Contract, ContractAuditLog, ContractChangelogEntry,
+    ContractChangelogResponse, ContractDeployment, ContractGetResponse,
+    ContractInteractionResponse, ContractSearchParams, ContractSource, ContractVersion,
     CreateContractVersionRequest, CreateInteractionBatchRequest, CreateInteractionRequest,
-    FavoriteSearch, FieldOperator,
-    GraphResponse, InteractionTimeSeriesPoint, InteractionTimeSeriesResponse,
-    InteractionsListResponse, InteractionsQueryParams, Network, NetworkConfig, NetworkEndpoints,
-    NetworkInfo, NetworkListResponse, NetworkStatus, PaginatedResponse, PublishRequest, Publisher,
-    QueryCondition, QueryNode, QueryOperator, SaveFavoriteSearchRequest, SearchSuggestion,
-    SearchSuggestionsResponse, SemVer, TrendingParams, UpdateContractMetadataRequest,
-    UpdateContractStatusRequest, VerifyRequest,
+    FavoriteSearch, FieldOperator, GraphResponse, InteractionTimeSeriesPoint,
+    InteractionTimeSeriesResponse, InteractionsListResponse, InteractionsQueryParams, Network,
+    NetworkConfig, NetworkEndpoints, NetworkInfo, NetworkListResponse, NetworkStatus,
+    PaginatedResponse, PublishRequest, Publisher, QueryCondition, QueryNode, QueryOperator,
+    SaveFavoriteSearchRequest, SearchSuggestion, SearchSuggestionsResponse, SemVer, TrendingParams,
+    UpdateContractMetadataRequest, UpdateContractStatusRequest, VerifyRequest,
 };
 use sqlx::{Postgres, QueryBuilder};
 use std::collections::{HashMap, HashSet};
@@ -52,8 +50,8 @@ pub struct BatchContractsQuery {
 }
 
 use crate::{
-    auth::AuthClaims,
     analytics,
+    auth::AuthClaims,
     breaking_changes::{diff_abi, has_breaking_changes, resolve_abi},
     contract_events::{ContractEventEnvelope, ContractEventVisibility},
     dependency,
@@ -404,13 +402,7 @@ pub async fn run_network_catalog_refresh(state: AppState) {
 }
 
 #[derive(
-    Debug,
-    Clone,
-    serde::Serialize,
-    serde::Deserialize,
-    PartialEq,
-    sqlx::Type,
-    utoipa::ToSchema,
+    Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, sqlx::Type, utoipa::ToSchema,
 )]
 #[sqlx(type_name = "contract_audit_event_type", rename_all = "snake_case")]
 #[allow(dead_code)]
@@ -1244,9 +1236,7 @@ pub async fn list_contracts(
         shared::SortBy::UpdatedAt => qb.push("c.updated_at "),
         shared::SortBy::VerifiedAt => qb.push("c.verified_at "),
         shared::SortBy::LastAccessedAt => qb.push("c.last_accessed_at "),
-        shared::SortBy::Popularity | shared::SortBy::Interactions => {
-            qb.push("COUNT(ci.id) ")
-        }
+        shared::SortBy::Popularity | shared::SortBy::Interactions => qb.push("COUNT(ci.id) "),
         _ => qb.push("c.created_at "),
     };
     qb.push(direction);
@@ -2169,14 +2159,13 @@ pub async fn get_specific_contract_version(
 ) -> ApiResult<Json<ContractVersion>> {
     let (contract_uuid, _) = fetch_contract_identity(&state, &id).await?;
 
-    let version_row: Option<ContractVersion> = sqlx::query_as(
-        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
-    )
-    .bind(contract_uuid)
-    .bind(&version)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|err| db_internal_error("get specific contract version", err))?;
+    let version_row: Option<ContractVersion> =
+        sqlx::query_as("SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2")
+            .bind(contract_uuid)
+            .bind(&version)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|err| db_internal_error("get specific contract version", err))?;
 
     version_row.map(Json).ok_or_else(|| {
         ApiError::not_found(
@@ -2219,14 +2208,13 @@ pub async fn compare_contract_versions(
 ) -> ApiResult<Json<shared::VersionCompareResponse>> {
     let (contract_uuid, _) = fetch_contract_identity(&state, &id).await?;
 
-    let from_row: Option<ContractVersion> = sqlx::query_as(
-        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
-    )
-    .bind(contract_uuid)
-    .bind(&params.from)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|err| db_internal_error("fetch from-version for compare", err))?;
+    let from_row: Option<ContractVersion> =
+        sqlx::query_as("SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2")
+            .bind(contract_uuid)
+            .bind(&params.from)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|err| db_internal_error("fetch from-version for compare", err))?;
 
     let from_row = from_row.ok_or_else(|| {
         ApiError::not_found(
@@ -2235,14 +2223,13 @@ pub async fn compare_contract_versions(
         )
     })?;
 
-    let to_row: Option<ContractVersion> = sqlx::query_as(
-        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
-    )
-    .bind(contract_uuid)
-    .bind(&params.to)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|err| db_internal_error("fetch to-version for compare", err))?;
+    let to_row: Option<ContractVersion> =
+        sqlx::query_as("SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2")
+            .bind(contract_uuid)
+            .bind(&params.to)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|err| db_internal_error("fetch to-version for compare", err))?;
 
     let to_row = to_row.ok_or_else(|| {
         ApiError::not_found(
@@ -2330,14 +2317,13 @@ pub async fn revert_contract_version(
     let (contract_uuid, contract_id) = fetch_contract_identity(&state, &id).await?;
 
     // Fetch the version we are reverting to.
-    let target: Option<ContractVersion> = sqlx::query_as(
-        "SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2",
-    )
-    .bind(contract_uuid)
-    .bind(&target_version)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|err| db_internal_error("fetch target version for revert", err))?;
+    let target: Option<ContractVersion> =
+        sqlx::query_as("SELECT * FROM contract_versions WHERE contract_id = $1 AND version = $2")
+            .bind(contract_uuid)
+            .bind(&target_version)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|err| db_internal_error("fetch target version for revert", err))?;
 
     let target = target.ok_or_else(|| {
         ApiError::not_found(
@@ -2372,9 +2358,9 @@ pub async fn revert_contract_version(
         }
     };
 
-    let change_notes = req.change_notes.unwrap_or_else(|| {
-        format!("Reverted to version {}", target_version)
-    });
+    let change_notes = req
+        .change_notes
+        .unwrap_or_else(|| format!("Reverted to version {}", target_version));
 
     let mut tx = state
         .db
@@ -3167,7 +3153,11 @@ pub async fn create_contract_version(
     )
     .await
     {
-        tracing::error!("Failed to store differential patch for version {}: {}", req.version, e);
+        tracing::error!(
+            "Failed to store differential patch for version {}: {}",
+            req.version,
+            e
+        );
     }
 
     // Post-commit dependency analysis

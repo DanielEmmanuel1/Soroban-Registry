@@ -11,7 +11,7 @@ import { ResultsCount } from '@/components/contracts/ResultsCount';
 import { SearchBar } from '@/components/contracts/SearchBar';
 import { SortDropdown, SortBy } from '@/components/contracts/SortDropdown';
 import TagAutocomplete from '@/components/tags/TagAutocomplete';
-import { Filter, Package, SlidersHorizontal, X, Sparkles, CheckCircle, Users } from 'lucide-react';
+import { Filter, Package, SlidersHorizontal, X, Sparkles, CheckCircle, Users, Search } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import QueryBuilder from '@/components/contracts/QueryBuilder';
@@ -209,7 +209,7 @@ export function ContractsContent() {
     networks: networks.length > 0 ? (networks as Array<'mainnet'|'testnet'|'futurenet'>) : undefined,
     author: author || undefined,
     verified_only: verified_only || undefined,
-    sort_by: sort_by as any,
+    sort_by: sort_by as SortBy,
     page,
     page_size,
   };

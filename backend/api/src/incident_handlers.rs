@@ -222,7 +222,10 @@ pub async fn report_incident(
     Json(req): Json<ReportIncidentRequest>,
 ) -> ApiResult<(StatusCode, Json<SecurityIncidentDetail>)> {
     if req.title.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidTitle", "title must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidTitle",
+            "title must not be empty",
+        ));
     }
     if req.description.trim().is_empty() {
         return Err(ApiError::bad_request(
@@ -231,7 +234,10 @@ pub async fn report_incident(
         ));
     }
     if req.reporter.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidReporter", "reporter must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidReporter",
+            "reporter must not be empty",
+        ));
     }
 
     let mut tx = state
@@ -401,10 +407,16 @@ pub async fn update_incident_status(
     Json(req): Json<UpdateIncidentStatusRequest>,
 ) -> ApiResult<Json<SecurityIncidentDetail>> {
     if req.author.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidAuthor", "author must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidAuthor",
+            "author must not be empty",
+        ));
     }
     if req.message.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidMessage", "message must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidMessage",
+            "message must not be empty",
+        ));
     }
 
     let mut tx = state
@@ -413,13 +425,12 @@ pub async fn update_incident_status(
         .await
         .map_err(|e| ApiError::internal(format!("begin tx: {}", e)))?;
 
-    let resolved_at: Option<DateTime<Utc>> = if req.status == IncidentStatus::Resolved
-        || req.status == IncidentStatus::Closed
-    {
-        Some(Utc::now())
-    } else {
-        None
-    };
+    let resolved_at: Option<DateTime<Utc>> =
+        if req.status == IncidentStatus::Resolved || req.status == IncidentStatus::Closed {
+            Some(Utc::now())
+        } else {
+            None
+        };
 
     let incident: SecurityIncident = sqlx::query_as(
         "UPDATE security_incidents \
@@ -464,10 +475,16 @@ pub async fn add_incident_update(
     Json(req): Json<AddIncidentUpdateRequest>,
 ) -> ApiResult<Json<IncidentUpdate>> {
     if req.author.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidAuthor", "author must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidAuthor",
+            "author must not be empty",
+        ));
     }
     if req.message.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidMessage", "message must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidMessage",
+            "message must not be empty",
+        ));
     }
     // Verify incident exists
     fetch_incident(&state, id).await?;
@@ -541,7 +558,10 @@ pub async fn publish_advisory(
     Json(req): Json<PublishAdvisoryRequest>,
 ) -> ApiResult<(StatusCode, Json<SecurityAdvisory>)> {
     if req.title.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidTitle", "title must not be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidTitle",
+            "title must not be empty",
+        ));
     }
 
     let advisory: SecurityAdvisory = sqlx::query_as(
@@ -570,12 +590,11 @@ pub async fn publish_advisory(
 pub async fn list_advisories(
     State(state): State<AppState>,
 ) -> ApiResult<Json<Vec<SecurityAdvisory>>> {
-    let advisories: Vec<SecurityAdvisory> = sqlx::query_as(
-        "SELECT * FROM security_advisories ORDER BY published_at DESC LIMIT 100",
-    )
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| ApiError::internal(format!("list advisories: {}", e)))?;
+    let advisories: Vec<SecurityAdvisory> =
+        sqlx::query_as("SELECT * FROM security_advisories ORDER BY published_at DESC LIMIT 100")
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| ApiError::internal(format!("list advisories: {}", e)))?;
 
     Ok(Json(advisories))
 }
@@ -592,9 +611,9 @@ pub async fn get_advisory(
             .await
             .map_err(|e| ApiError::internal(format!("fetch advisory: {}", e)))?;
 
-    advisory
-        .map(Json)
-        .ok_or_else(|| ApiError::not_found("AdvisoryNotFound", format!("Advisory {} not found", id)))
+    advisory.map(Json).ok_or_else(|| {
+        ApiError::not_found("AdvisoryNotFound", format!("Advisory {} not found", id))
+    })
 }
 
 /// POST /api/security/incidents/:id/notify
@@ -658,11 +677,7 @@ pub async fn notify_affected_users(
         }
     }
 
-    let channel = req
-        .channel
-        .as_deref()
-        .unwrap_or("in_app")
-        .to_owned();
+    let channel = req.channel.as_deref().unwrap_or("in_app").to_owned();
 
     let default_template = format!(
         "Security incident reported: [{}] {} — {}",
@@ -710,9 +725,7 @@ pub async fn notify_affected_users(
 ///
 /// Generate an aggregate security report: counts by severity/status, open incidents,
 /// recent advisories, and mean time to resolve.
-pub async fn get_security_report(
-    State(state): State<AppState>,
-) -> ApiResult<Json<IncidentReport>> {
+pub async fn get_security_report(State(state): State<AppState>) -> ApiResult<Json<IncidentReport>> {
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM security_incidents")
         .fetch_one(&state.db)
         .await
@@ -737,12 +750,11 @@ pub async fn get_security_report(
     .await
     .map_err(|e| ApiError::internal(format!("open incidents: {}", e)))?;
 
-    let recent_advisories: Vec<SecurityAdvisory> = sqlx::query_as(
-        "SELECT * FROM security_advisories ORDER BY published_at DESC LIMIT 10",
-    )
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| ApiError::internal(format!("advisories: {}", e)))?;
+    let recent_advisories: Vec<SecurityAdvisory> =
+        sqlx::query_as("SELECT * FROM security_advisories ORDER BY published_at DESC LIMIT 10")
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| ApiError::internal(format!("advisories: {}", e)))?;
 
     // MTTR: average hours from reported_at to resolved_at for resolved/closed incidents
     let mttr: Option<f64> = sqlx::query_scalar(
@@ -775,7 +787,9 @@ async fn fetch_incident(state: &AppState, id: Uuid) -> ApiResult<SecurityInciden
         .fetch_optional(&state.db)
         .await
         .map_err(|e| ApiError::internal(format!("fetch incident: {}", e)))?
-        .ok_or_else(|| ApiError::not_found("IncidentNotFound", format!("Incident {} not found", id)))
+        .ok_or_else(|| {
+            ApiError::not_found("IncidentNotFound", format!("Incident {} not found", id))
+        })
 }
 
 async fn build_incident_detail(
@@ -811,11 +825,12 @@ async fn count_by_severity(state: &AppState) -> ApiResult<SeverityBreakdown> {
         severity: IncidentSeverity,
         count: i64,
     }
-    let rows: Vec<Row> =
-        sqlx::query_as("SELECT severity, COUNT(*) AS count FROM security_incidents GROUP BY severity")
-            .fetch_all(&state.db)
-            .await
-            .map_err(|e| ApiError::internal(format!("severity counts: {}", e)))?;
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT severity, COUNT(*) AS count FROM security_incidents GROUP BY severity",
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| ApiError::internal(format!("severity counts: {}", e)))?;
 
     let mut b = SeverityBreakdown {
         critical: 0,

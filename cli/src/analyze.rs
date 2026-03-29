@@ -188,7 +188,10 @@ async fn fetch_contract(
         anyhow::bail!("Registry API error ({}): {}", status, body);
     }
 
-    let raw: Value = res.json().await.context("Failed to parse registry response")?;
+    let raw: Value = res
+        .json()
+        .await
+        .context("Failed to parse registry response")?;
 
     // Handle paginated list or direct object
     if let Some(items) = raw["items"].as_array() {
@@ -200,10 +203,7 @@ async fn fetch_contract(
             })
             .cloned()
             .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Contract '{}' not found in registry response",
-                    contract_id
-                )
+                anyhow::anyhow!("Contract '{}' not found in registry response", contract_id)
             });
     }
 
@@ -245,12 +245,7 @@ async fn fetch_dependencies(
     res.json::<Value>()
         .await
         .ok()
-        .and_then(|v| {
-            v["items"]
-                .as_array()
-                .or_else(|| v.as_array())
-                .cloned()
-        })
+        .and_then(|v| v["items"].as_array().or_else(|| v.as_array()).cloned())
         .unwrap_or_default()
 }
 
@@ -267,7 +262,13 @@ fn build_report(
     let security = analyse_security(contract, detail);
     let dependencies = analyse_dependencies(deps_raw);
     let performance = estimate_performance(contract, detail, &complexity);
-    let suggestions = generate_suggestions(contract, &complexity, &security, &dependencies, &performance);
+    let suggestions = generate_suggestions(
+        contract,
+        &complexity,
+        &security,
+        &dependencies,
+        &performance,
+    );
 
     AnalysisReport {
         contract_id: contract_id.to_string(),
@@ -361,10 +362,7 @@ fn analyse_security(contract: &Value, detail: &Option<Value>) -> SecurityAnalysi
             for f in findings {
                 let sev = f["severity"].as_str().unwrap_or("info").to_string();
                 let title = f["title"].as_str().unwrap_or("Unknown finding").to_string();
-                let desc = f["description"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string();
+                let desc = f["description"].as_str().unwrap_or("").to_string();
                 let is_anti = matches!(sev.as_str(), "high" | "critical" | "medium");
                 let pat = SecurityPattern {
                     name: title,
@@ -393,7 +391,9 @@ fn analyse_security(contract: &Value, detail: &Option<Value>) -> SecurityAnalysi
     if contract["is_maintenance"].as_bool().unwrap_or(false) {
         anti_patterns.push(SecurityPattern {
             name: "Maintenance Mode".to_string(),
-            description: "Contract is currently in maintenance mode — interactions may be restricted.".to_string(),
+            description:
+                "Contract is currently in maintenance mode — interactions may be restricted."
+                    .to_string(),
             severity: "high".to_string(),
         });
     }
@@ -425,10 +425,7 @@ fn analyse_dependencies(deps_raw: Vec<Value>) -> DependencyAnalysis {
                 .or(d["name"].as_str())
                 .unwrap_or("unknown")
                 .to_string(),
-            version_constraint: d["version_constraint"]
-                .as_str()
-                .unwrap_or("*")
-                .to_string(),
+            version_constraint: d["version_constraint"].as_str().unwrap_or("*").to_string(),
             is_verified: d["is_verified"].as_bool().unwrap_or(false),
         })
         .collect();
@@ -520,7 +517,9 @@ fn generate_suggestions(
             category: "best_practice".to_string(),
             priority: "medium".to_string(),
             title: "Improve registry health score".to_string(),
-            detail: "Add a description, tags, and category to improve discoverability and health score.".to_string(),
+            detail:
+                "Add a description, tags, and category to improve discoverability and health score."
+                    .to_string(),
         });
     }
 
@@ -667,20 +666,18 @@ fn render_text(report: &AnalysisReport) -> String {
     out.push_str(&format!("  Risk level:        {}\n", risk_label));
 
     if !report.security.patterns_detected.is_empty() {
-        out.push_str(&format!(
-            "  {} Good patterns:\n",
-            "✔".green()
-        ));
+        out.push_str(&format!("  {} Good patterns:\n", "✔".green()));
         for p in &report.security.patterns_detected {
-            out.push_str(&format!("    • {} — {}\n", p.name.bold(), p.description.dimmed()));
+            out.push_str(&format!(
+                "    • {} — {}\n",
+                p.name.bold(),
+                p.description.dimmed()
+            ));
         }
     }
 
     if !report.security.anti_patterns_detected.is_empty() {
-        out.push_str(&format!(
-            "  {} Issues detected:\n",
-            "✘".red()
-        ));
+        out.push_str(&format!("  {} Issues detected:\n", "✘".red()));
         for p in &report.security.anti_patterns_detected {
             let sev_label = match p.severity.as_str() {
                 "critical" => format!("[{}]", p.severity.to_uppercase()).red().bold(),
@@ -730,7 +727,10 @@ fn render_text(report: &AnalysisReport) -> String {
     out.push('\n');
 
     // ── Performance ───────────────────────────────────────────────────────────
-    out.push_str(&format!("  {}\n", "PERFORMANCE ESTIMATES".bold().underline()));
+    out.push_str(&format!(
+        "  {}\n",
+        "PERFORMANCE ESTIMATES".bold().underline()
+    ));
     out.push_str(&format!(
         "  Estimated ops:       {}\n",
         report.performance.estimated_ops

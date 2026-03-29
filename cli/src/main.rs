@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 
+mod analyze;
 mod backup;
 mod batch_register;
 mod batch_verify;
@@ -29,10 +30,9 @@ mod release_notes;
 mod sla;
 mod table_format;
 mod test_framework;
+mod track_deployment;
 mod webhook;
 mod wizard;
-mod analyze;
-mod track_deployment;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};

@@ -326,9 +326,7 @@ async fn reconstruct_version(
 
     // Walk forward through the chain.
     loop {
-        let next = patches
-            .iter()
-            .find(|p| p.from_version == current_version);
+        let next = patches.iter().find(|p| p.from_version == current_version);
         match next {
             None => return Ok(None),
             Some(p) => {
@@ -412,13 +410,12 @@ async fn fetch_abi(
     contract_uuid: Uuid,
     version: &str,
 ) -> Result<Option<Value>, sqlx::Error> {
-    let row: Option<(Value,)> = sqlx::query_as(
-        "SELECT abi FROM contract_abis WHERE contract_id = $1 AND version = $2",
-    )
-    .bind(contract_uuid)
-    .bind(version)
-    .fetch_optional(db)
-    .await?;
+    let row: Option<(Value,)> =
+        sqlx::query_as("SELECT abi FROM contract_abis WHERE contract_id = $1 AND version = $2")
+            .bind(contract_uuid)
+            .bind(version)
+            .fetch_optional(db)
+            .await?;
     Ok(row.map(|(v,)| v))
 }
 

@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // CONTRACT REVIEW SYSTEM HANDLERS
 // ═══════════════════════════════════════════════════════════════════════════
-// 
+//
 // This module implements the complete review system for contracts:
 // - Submit reviews (POST /contracts/:id/reviews)
 // - Fetch reviews with sorting (GET /contracts/:id/reviews)
@@ -82,16 +82,15 @@ pub async fn create_review(
     }
 
     // Verify contract exists
-    let contract_exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM contracts WHERE id = $1)",
-    )
-    .bind(contract_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!(error = ?e, "database error checking contract existence");
-        ApiError::internal("Failed to verify contract existence")
-    })?;
+    let contract_exists =
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM contracts WHERE id = $1)")
+            .bind(contract_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, "database error checking contract existence");
+                ApiError::internal("Failed to verify contract existence")
+            })?;
 
     if !contract_exists {
         return Err(ApiError::not_found(
@@ -391,18 +390,16 @@ pub async fn vote_review(
         }
     } else {
         // Insert new vote
-        sqlx::query(
-            "INSERT INTO review_votes (review_id, user_id, vote) VALUES ($1, $2, $3)",
-        )
-        .bind(review_id)
-        .bind(user_id)
-        .bind(payload.helpful)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = ?e, "database error inserting vote");
-            ApiError::internal("Failed to insert vote")
-        })?;
+        sqlx::query("INSERT INTO review_votes (review_id, user_id, vote) VALUES ($1, $2, $3)")
+            .bind(review_id)
+            .bind(user_id)
+            .bind(payload.helpful)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, "database error inserting vote");
+                ApiError::internal("Failed to insert vote")
+            })?;
 
         // Update helpful_count: +1 for helpful, 0 for unhelpful (unhelpful doesn't decrease)
         if payload.helpful {
@@ -425,16 +422,15 @@ pub async fn vote_review(
     })?;
 
     // Fetch updated helpful_count
-    let helpful_count = sqlx::query_scalar::<_, i32>(
-        "SELECT helpful_count FROM reviews WHERE id = $1",
-    )
-    .bind(review_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!(error = ?e, "database error fetching helpful count");
-        ApiError::internal("Failed to fetch updated helpful count")
-    })?;
+    let helpful_count =
+        sqlx::query_scalar::<_, i32>("SELECT helpful_count FROM reviews WHERE id = $1")
+            .bind(review_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, "database error fetching helpful count");
+                ApiError::internal("Failed to fetch updated helpful count")
+            })?;
 
     Ok(Json(ReviewVoteResponse {
         review_id,
@@ -735,15 +731,14 @@ pub async fn get_rating_stats(
 pub async fn get_pending_reviews_count(
     State(pool): State<PgPool>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM reviews WHERE status = 'pending'",
-    )
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!(error = ?e, "database error fetching pending reviews count");
-        ApiError::internal("Failed to fetch pending reviews count")
-    })?;
+    let count =
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews WHERE status = 'pending'")
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, "database error fetching pending reviews count");
+                ApiError::internal("Failed to fetch pending reviews count")
+            })?;
 
     Ok(Json(serde_json::json!({ "pending_reviews": count })))
 }

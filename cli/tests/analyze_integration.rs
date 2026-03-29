@@ -31,7 +31,11 @@ fn test_analyze_help() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("CONTRACT_ID") || stdout.contains("contract-id") || stdout.contains("contract_id"));
+    assert!(
+        stdout.contains("CONTRACT_ID")
+            || stdout.contains("contract-id")
+            || stdout.contains("contract_id")
+    );
     assert!(stdout.contains("network"));
     assert!(stdout.contains("report-format") || stdout.contains("report_format"));
     assert!(stdout.contains("output"));

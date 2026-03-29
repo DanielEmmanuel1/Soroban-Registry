@@ -437,10 +437,10 @@ async fn handle_socket(
     let connection_id = CONNECTION_COUNTER.fetch_add(1, Ordering::Relaxed);
     let (mut sender, mut receiver) = socket.split();
     let mut events = state.event_broadcaster.subscribe();
-    
+
     // Fixed intervals for heartbeat and reconnect
     let heartbeat_ms: u64 = 30_000; // 30 seconds
-    let reconnect_ms: u64 = 5_000;  // 5 seconds
+    let reconnect_ms: u64 = 5_000; // 5 seconds
 
     let connected = ServerMessage::Connected {
         connection_id,
