@@ -290,6 +290,16 @@ pub fn contract_routes() -> Router<AppState> {
             "/api/contracts/simulate-deploy",
             post(simulation_handlers::simulate_deploy),
         )
+        // Gas usage estimation (Issue #496)
+        // Static segment "gas-estimate/batch" registered before dynamic ":method"
+        .route(
+            "/api/contracts/:id/methods/gas-estimate/batch",
+            post(gas_estimation_handlers::batch_gas_estimate),
+        )
+        .route(
+            "/api/contracts/:id/methods/:method/gas-estimate",
+            get(gas_estimation_handlers::get_method_gas_estimate),
+        )
         // Review system endpoints
         .route(
             "/api/contracts/:id/reviews",
