@@ -13,8 +13,8 @@ mod compatibility_testing_handlers;
 mod contract_events;
 mod contributor_handlers;
 mod db_monitoring;
-mod graphql;
 mod governance_handlers;
+mod graphql;
 mod interoperability;
 mod interoperability_handlers;
 
@@ -275,8 +275,14 @@ async fn main() -> Result<()> {
         .merge(routes::websocket_routes())
         .merge(routes::validator_routes())
         .merge(release_notes_routes::release_notes_routes())
-        .route("/api/graphql", axum::routing::post(graphql::graphql_handler).with_state(schema))
-        .route("/api/graphql/playground", axum::routing::get(graphql::graphql_playground))
+        .route(
+            "/api/graphql",
+            axum::routing::post(graphql::graphql_handler).with_state(schema),
+        )
+        .route(
+            "/api/graphql/playground",
+            axum::routing::get(graphql::graphql_playground),
+        )
         .nest("/api", activity_feed_routes::routes())
         .fallback(handlers::route_not_found)
         .layer(middleware::from_fn(

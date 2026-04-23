@@ -520,9 +520,8 @@ pub async fn get_analytics_timeseries(
     let group_by = TimeSeriesGroupBy::parse(query.group_by.as_deref())?;
 
     let rows: Vec<AnalyticsTimeSeriesRow> = match group_by {
-        TimeSeriesGroupBy::Network => {
-            sqlx::query_as(
-                r#"
+        TimeSeriesGroupBy::Network => sqlx::query_as(
+            r#"
                 SELECT
                     a.date AS day,
                     c.network::TEXT AS group_key,
@@ -539,19 +538,17 @@ pub async fn get_analytics_timeseries(
                 GROUP BY a.date, c.network
                 ORDER BY a.date ASC, c.network::TEXT ASC
                 "#,
-            )
-            .bind(start_date)
-            .bind(end_date)
-            .bind(query.network)
-            .bind(query.category.as_deref())
-            .bind(query.publisher_id)
-            .fetch_all(&state.db)
-            .await
-            .map_err(|err| db_err("fetch analytics timeseries grouped by network", err))?
-        }
-        TimeSeriesGroupBy::Category => {
-            sqlx::query_as(
-                r#"
+        )
+        .bind(start_date)
+        .bind(end_date)
+        .bind(query.network)
+        .bind(query.category.as_deref())
+        .bind(query.publisher_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|err| db_err("fetch analytics timeseries grouped by network", err))?,
+        TimeSeriesGroupBy::Category => sqlx::query_as(
+            r#"
                 SELECT
                     a.date AS day,
                     COALESCE(c.category, 'uncategorized') AS group_key,
@@ -568,19 +565,17 @@ pub async fn get_analytics_timeseries(
                 GROUP BY a.date, COALESCE(c.category, 'uncategorized')
                 ORDER BY a.date ASC, group_key ASC
                 "#,
-            )
-            .bind(start_date)
-            .bind(end_date)
-            .bind(query.network)
-            .bind(query.category.as_deref())
-            .bind(query.publisher_id)
-            .fetch_all(&state.db)
-            .await
-            .map_err(|err| db_err("fetch analytics timeseries grouped by category", err))?
-        }
-        TimeSeriesGroupBy::Publisher => {
-            sqlx::query_as(
-                r#"
+        )
+        .bind(start_date)
+        .bind(end_date)
+        .bind(query.network)
+        .bind(query.category.as_deref())
+        .bind(query.publisher_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|err| db_err("fetch analytics timeseries grouped by category", err))?,
+        TimeSeriesGroupBy::Publisher => sqlx::query_as(
+            r#"
                 SELECT
                     a.date AS day,
                     COALESCE(p.stellar_address, c.publisher_id::TEXT) AS group_key,
@@ -598,35 +593,31 @@ pub async fn get_analytics_timeseries(
                 GROUP BY a.date, COALESCE(p.stellar_address, c.publisher_id::TEXT)
                 ORDER BY a.date ASC, group_key ASC
                 "#,
-            )
-            .bind(start_date)
-            .bind(end_date)
-            .bind(query.network)
-            .bind(query.category.as_deref())
-            .bind(query.publisher_id)
-            .fetch_all(&state.db)
-            .await
-            .map_err(|err| db_err("fetch analytics timeseries grouped by publisher", err))?
-        }
+        )
+        .bind(start_date)
+        .bind(end_date)
+        .bind(query.network)
+        .bind(query.category.as_deref())
+        .bind(query.publisher_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|err| db_err("fetch analytics timeseries grouped by publisher", err))?,
     };
 
     let mut by_group: HashMap<String, BTreeMap<NaiveDate, AnalyticsTimeSeriesPoint>> =
         HashMap::new();
 
     for row in rows {
-        by_group
-            .entry(row.group_key)
-            .or_default()
-            .insert(
-                row.day,
-                AnalyticsTimeSeriesPoint {
-                    date: row.day,
-                    deployments: row.deployments,
-                    verifications: row.verifications,
-                    updates: row.updates,
-                    total_events: row.total_events,
-                },
-            );
+        by_group.entry(row.group_key).or_default().insert(
+            row.day,
+            AnalyticsTimeSeriesPoint {
+                date: row.day,
+                deployments: row.deployments,
+                verifications: row.verifications,
+                updates: row.updates,
+                total_events: row.total_events,
+            },
+        );
     }
 
     let mut series: Vec<AnalyticsTimeSeriesGroup> = by_group

@@ -253,7 +253,8 @@ async fn evaluate_proposal_status(
     };
 
     let final_status = if new_status == GovernanceProposalStatus::Passed
-        && now >= proposal.voting_ends_at + Duration::hours(i64::from(proposal.execution_delay_hours))
+        && now
+            >= proposal.voting_ends_at + Duration::hours(i64::from(proposal.execution_delay_hours))
     {
         GovernanceProposalStatus::Executed
     } else {
@@ -291,7 +292,10 @@ pub async fn create_proposal(
     Json(payload): Json<CreateProposalRequest>,
 ) -> ApiResult<Json<GovernanceProposal>> {
     if payload.title.trim().is_empty() {
-        return Err(ApiError::bad_request("InvalidTitle", "title cannot be empty"));
+        return Err(ApiError::bad_request(
+            "InvalidTitle",
+            "title cannot be empty",
+        ));
     }
     if payload.description.trim().is_empty() {
         return Err(ApiError::bad_request(
@@ -661,7 +665,8 @@ pub async fn execute_proposal(
     .map_err(|e| db_err("load governance proposal for execution", e))?
     .ok_or_else(|| ApiError::not_found("ProposalNotFound", "governance proposal not found"))?;
 
-    let earliest_execution = proposal.voting_ends_at + Duration::hours(i64::from(proposal.execution_delay_hours));
+    let earliest_execution =
+        proposal.voting_ends_at + Duration::hours(i64::from(proposal.execution_delay_hours));
     if Utc::now() < earliest_execution {
         return Err(ApiError::conflict(
             "ExecutionDelayPending",

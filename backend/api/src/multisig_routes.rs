@@ -13,7 +13,8 @@ pub fn routes() -> Router<AppState> {
         )
         .route(
             "/api/multisig/publishers/:id/keys",
-            get(multisig_handlers::list_publisher_keys).post(multisig_handlers::create_publisher_key),
+            get(multisig_handlers::list_publisher_keys)
+                .post(multisig_handlers::create_publisher_key),
         )
         .route(
             "/api/multisig/keys/:id/deactivate",

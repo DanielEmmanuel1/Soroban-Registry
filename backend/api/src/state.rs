@@ -13,7 +13,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
-
 use tokio::sync::broadcast;
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -58,7 +57,6 @@ pub struct AppState {
     pub contract_events: Arc<ContractEventHub>,
     pub source_storage: Arc<shared::source_storage::SourceStorage>,
 }
-
 
 impl AppState {
     pub async fn new(
