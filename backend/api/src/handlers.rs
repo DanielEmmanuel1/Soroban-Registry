@@ -1,4 +1,5 @@
 pub mod reviews;
+pub mod compatibility;
 pub mod validators;
 
 use crate::validation::extractors::ValidatedJson;

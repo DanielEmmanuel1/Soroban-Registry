@@ -258,6 +258,15 @@ pub fn contract_routes() -> Router<AppState> {
         )
         .route(
             "/api/contracts/:id/compatibility",
+            get(handlers::compatibility::get_contract_compatibility)
+                .post(handlers::compatibility::add_contract_compatibility),
+        )
+        .route(
+            "/api/contracts/:id/compatibility/export",
+            get(handlers::compatibility::export_contract_compatibility),
+        )
+        .route(
+            "/api/contracts/:id/interoperability",
             get(interoperability_handlers::get_contract_interoperability),
         )
         .route(
