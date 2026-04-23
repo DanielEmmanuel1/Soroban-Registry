@@ -214,7 +214,7 @@ export function ContractsContent() {
     networks: networks.length > 0 ? (networks as Array<'mainnet'|'testnet'|'futurenet'>) : undefined,
     author: author || undefined,
     verified_only: verified_only || undefined,
-    sort_by: sort_by as any,
+    sort_by,
     page,
     page_size,
   };
