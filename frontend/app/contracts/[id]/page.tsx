@@ -431,6 +431,13 @@ function ContractDetailsContent() {
 
           <div className="flex gap-2">
             <Link
+              href={`/compare?contracts=${contract.id}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <GitCompare className="h-4 w-4" />
+              Compare
+            </Link>
+            <Link
               href={`/contracts/${id}/compatibility`}
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
