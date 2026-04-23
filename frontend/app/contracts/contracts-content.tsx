@@ -8,14 +8,17 @@ import ContractCardSkeleton from '@/components/ContractCardSkeleton';
 import { ActiveFilters } from '@/components/contracts/ActiveFilters';
 import { FilterPanel } from '@/components/contracts/FilterPanel';
 import { ResultsCount } from '@/components/contracts/ResultsCount';
-import { SearchBar } from '@/components/contracts/SearchBar';
-import { SortDropdown, SortBy } from '@/components/contracts/SortDropdown';
+import { SortDropdown } from '@/components/contracts/SortDropdown';
 import TagAutocomplete from '@/components/tags/TagAutocomplete';
 import { Filter, Package, Search, SlidersHorizontal, X, Sparkles, CheckCircle, Users } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import QueryBuilder from '@/components/contracts/QueryBuilder';
-import FavoriteSearches from '@/components/contracts/FavoriteSearches';
+import {
+  persistSortPreference,
+  resolveInitialSortPreference,
+  sortContracts,
+  type SortBy,
+} from './sort-utils';
 
 const DEFAULT_PAGE_SIZE = 12;
 const CATEGORY_OPTIONS_NAMES = [
@@ -147,11 +150,11 @@ function getInitialFilters(searchParams: URLSearchParams): ContractsUiFilters {
       network === 'mainnet' || network === 'testnet' || network === 'futurenet',
   );
 
-  const sortBy = searchParams.get('sort_by') as SortBy;
-  const sortOrder = searchParams.get('sort_order') as 'asc' | 'desc';
+  const sortPreference = resolveInitialSortPreference(
+    searchParams,
+    typeof window !== 'undefined' ? window.localStorage : undefined,
+  );
   const parsedPage = Number(searchParams.get('page') || '1');
-
-  const validSortBys: SortBy[] = ['name', 'created_at', 'updated_at', 'popularity', 'deployments', 'interactions', 'relevance', 'downloads'];
 
   return {
     query,
@@ -161,8 +164,8 @@ function getInitialFilters(searchParams: URLSearchParams): ContractsUiFilters {
     author: searchParams.get('author') || '',
     networks,
     verified_only: searchParams.get('verified_only') === 'true',
-    sort_by: validSortBys.includes(sortBy) ? sortBy : (query ? 'relevance' : 'created_at'),
-    sort_order: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc',
+    sort_by: sortPreference.sort_by,
+    sort_order: sortPreference.sort_order,
     page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
     page_size: DEFAULT_PAGE_SIZE,
   };
@@ -184,11 +187,6 @@ export function ContractsContent() {
   const { query, categories, languages, tags, networks, author, verified_only, sort_by, sort_order, page, page_size } = filters;
 
   useEffect(() => {
-    // Skip URL sync if no filters are active
-    const isEmptyFilters = !query && categories.length === 0 && languages.length === 0 && 
-                           tags.length === 0 && networks.length === 0 && !author && !verified_only;
-    if (isEmptyFilters) return;
-
     const params = new URLSearchParams();
     if (query) params.set('query', query);
     categories.forEach((category) => params.append('category', category));
@@ -206,15 +204,26 @@ export function ContractsContent() {
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
   }, [query, categories, languages, tags, networks, author, verified_only, sort_by, sort_order, page, page_size, pathname, router]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    persistSortPreference(
+      { sort_by: filters.sort_by, sort_order: filters.sort_order },
+      window.localStorage,
+    );
+  }, [filters.sort_by, filters.sort_order]);
+
   // Build API parameters from filters  
   const apiParams = {
-    keyword: query,
+    query,
     categories: categories.length > 0 ? categories : undefined,
     languages: languages.length > 0 ? languages : undefined,
     networks: networks.length > 0 ? (networks as Array<'mainnet'|'testnet'|'futurenet'>) : undefined,
     author: author || undefined,
+    tags: tags.length > 0 ? tags : undefined,
     verified_only: verified_only || undefined,
-    sort_by: sort_by as any,
+    sort_by: (sort_by === 'rating' ? 'popularity' : sort_by) as ContractSearchParams['sort_by'],
+    sort_order,
     page,
     page_size,
   };
@@ -273,19 +282,9 @@ export function ContractsContent() {
       filtered = filtered.filter((c) => c.is_verified);
     }
 
-    // Sort
-    const order = filters.sort_order === 'asc' ? 1 : -1;
-    filtered = [...filtered].sort((a, b) => {
-      switch (filters.sort_by) {
-        case 'name':
-          return order * a.name.localeCompare(b.name);
-        case 'popularity':
-          return order * ((a.popularity_score ?? 0) - (b.popularity_score ?? 0));
-        case 'updated_at':
-          return order * (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
-        default:
-          return order * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      }
+    filtered = sortContracts(filtered, {
+      sort_by: filters.sort_by,
+      sort_order: filters.sort_order,
     });
 
     // Paginate
@@ -330,6 +329,7 @@ export function ContractsContent() {
       Boolean(payload.author) ||
       payload.verified_only ||
       payload.sort_by !== 'created_at' ||
+      payload.sort_order !== 'desc' ||
       payload.page > 1;
 
     if (!hasSearchInput) return;
@@ -439,8 +439,8 @@ export function ContractsContent() {
     if (filters.sort_by !== 'created_at' || filters.sort_order !== 'desc') {
       chips.push({
         id: 'sort',
-        label: `Sort: ${filters.sort_by.replace('_', ' ')} (${filters.sort_order})`,
-        onRemove: () => setFilters((current) => ({ ...current, sort_by: 'created_at', sort_order: 'desc' })),
+        label: `Sort: ${filters.sort_by === 'created_at' ? 'date' : filters.sort_by} (${filters.sort_order})`,
+        onRemove: () => setFilters((current) => ({ ...current, sort_by: 'created_at', sort_order: 'desc', page: 1 })),
       });
     }
 

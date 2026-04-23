@@ -172,6 +172,14 @@ test('getContracts: network + category combined sends both params', async () => 
   expect(url.searchParams.get('category')).toBe('DeFi');
 });
 
+test('getContracts: rating sort is mapped to backend sort params and preserves order', async () => {
+  fetchMock.mockResponseOnce(JSON.stringify(makeContractsResponse()), { status: 200 });
+  await api.getContracts({ sort_by: 'rating', sort_order: 'asc' });
+  const url = getCalledUrl();
+  expect(url.searchParams.get('sort_by')).toBe('popularity');
+  expect(url.searchParams.get('sort_order')).toBe('asc');
+});
+
 test('getContracts: legacy "contracts" response key is normalized to items', async () => {
   const legacy = { contracts: [{ id: 'c1', contract_id: 'c1', wasm_hash: '', name: 'A', publisher_id: 'p1', network: 'mainnet', is_verified: false, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() }], total: 1, page: 1, pages: 1 };
   fetchMock.mockResponseOnce(JSON.stringify(legacy), { status: 200 });

@@ -73,6 +73,12 @@ export interface Contract {
   tags: string[];
   popularity_score?: number;
   downloads?: number;
+  average_rating?: number;
+  avg_rating?: number;
+  review_count?: number;
+  deployment_count?: number;
+  interaction_count?: number;
+  relevance_score?: number;
   // Image fields for contract logo/icon
   logo_url?: string;
   created_at: string;
@@ -244,7 +250,7 @@ export interface AnalyticsEvent {
   contract_id: string;
   user_address: string | null;
   network: Network | null;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -298,7 +304,7 @@ export interface ContractSearchParams {
   maturity?: 'alpha' | 'beta' | 'stable' | 'mature' | 'legacy';
   page?: number;
   page_size?: number;
-  sort_by?: 'name' | 'created_at' | 'updated_at' | 'popularity' | 'deployments' | 'interactions' | 'relevance' | 'downloads';
+  sort_by?: 'name' | 'created_at' | 'updated_at' | 'popularity' | 'deployments' | 'interactions' | 'relevance' | 'downloads' | 'rating';
   sort_order?: 'asc' | 'desc';
   date_from?: string;
   date_to?: string;
@@ -626,6 +632,14 @@ export const api = {
               const bPopularity = b.popularity_score ?? 0;
               return aPopularity - bPopularity;
             }
+            if (sortBy === "rating") {
+              const aRating = a.average_rating ?? a.avg_rating ?? 0;
+              const bRating = b.average_rating ?? b.avg_rating ?? 0;
+              if (aRating !== bRating) {
+                return aRating - bRating;
+              }
+              return (a.review_count ?? 0) - (b.review_count ?? 0);
+            }
             if (sortBy === "downloads") {
               const aDownloads = a.downloads ?? 0;
               const bDownloads = b.downloads ?? 0;
@@ -676,7 +690,11 @@ export const api = {
     // For legacy UI labels we keep a small compatibility mapping.
     if (params?.sort_by) {
       const backendSortBy =
-        params.sort_by === 'downloads' ? 'interactions' : params.sort_by;
+        params.sort_by === 'downloads'
+          ? 'interactions'
+          : params.sort_by === 'rating'
+            ? 'popularity'
+            : params.sort_by;
       queryParams.append("sort_by", backendSortBy);
     }
     if (params?.sort_order) queryParams.append("sort_order", params.sort_order);
