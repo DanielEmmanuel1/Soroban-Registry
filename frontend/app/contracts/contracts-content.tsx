@@ -665,14 +665,24 @@ export function ContractsContent() {
           {/* Results grid */}
           <div className="flex-1 min-w-0">
             {isLoading ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                role="status"
+                aria-label="Loading contracts"
+                aria-live="polite"
+                className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8"
+              >
+                {Array.from({ length: DEFAULT_PAGE_SIZE }).map((_, i) => (
                   <ContractCardSkeleton key={i} />
                 ))}
+                <span className="sr-only">Loading contracts, please wait…</span>
               </div>
             ) : effectiveData && effectiveData.items.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+                <div
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8 animate-in fade-in duration-300"
+                >
                   {effectiveData.items.map((contract: Contract) => (
                     <ContractCard key={contract.id} contract={contract} />
                   ))}
