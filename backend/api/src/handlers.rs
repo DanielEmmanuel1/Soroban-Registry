@@ -1,4 +1,5 @@
 pub mod reviews;
+pub mod compatibility;
 pub mod validators;
 
 use crate::validation::extractors::ValidatedJson;
@@ -37,7 +38,7 @@ use shared::{
 // These types were used in handlers.rs but are now missing from the shared crate.
 // ────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct AdvancedSearchRequest {
     pub query: QueryNode,
     pub limit: Option<i64>,
@@ -47,7 +48,7 @@ pub struct AdvancedSearchRequest {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(untagged)]
 pub enum QueryNode {
     Condition(QueryCondition),
     Group {
@@ -56,22 +57,22 @@ pub enum QueryNode {
     },
 }
 
-#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum QueryOperator {
     And,
     Or,
 }
 
-#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct QueryCondition {
     pub field: String,
     pub operator: FieldOperator,
     pub value: serde_json::Value,
 }
 
-#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum FieldOperator {
     Eq,
     Ne,
@@ -189,6 +190,89 @@ pub(crate) async fn fetch_contract_identity(
                 _ => db_internal_error("fetch contract identity by address", err),
             })?;
     Ok((uuid, contract_id))
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct MultisigProposalValidation {
+    contract_id: String,
+    status: String,
+    expires_at: chrono::DateTime<chrono::Utc>,
+    required_approvals: i32,
+    approved_signatures: i64,
+}
+
+async fn require_multisig_approval_for_sensitive_update(
+    state: &AppState,
+    headers: &HeaderMap,
+    contract: &Contract,
+    action_label: &str,
+) -> ApiResult<()> {
+    let proposal_id = headers
+        .get("x-multisig-proposal-id")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| {
+            ApiError::forbidden_with_error(
+                "MultisigRequired",
+                format!(
+                    "{} requires multisig approval; include x-multisig-proposal-id",
+                    action_label
+                ),
+            )
+        })
+        .and_then(|raw| {
+            Uuid::parse_str(raw)
+                .map_err(|_| ApiError::bad_request("InvalidProposalId", "invalid proposal id"))
+        })?;
+
+    let proposal = sqlx::query_as::<_, MultisigProposalValidation>(
+        "SELECT
+            p.contract_id,
+            p.status::text AS status,
+            p.expires_at,
+            p.required_approvals,
+            COALESCE((
+                SELECT COUNT(*)
+                FROM proposal_signatures s
+                WHERE s.proposal_id = p.id AND s.decision = 'approved'
+            ), 0)::BIGINT AS approved_signatures
+         FROM deploy_proposals p
+         WHERE p.id = $1",
+    )
+    .bind(proposal_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|err| db_internal_error("validate multisig proposal", err))?
+    .ok_or_else(|| ApiError::not_found("ProposalNotFound", "multisig proposal not found"))?;
+
+    if proposal.contract_id != contract.contract_id {
+        return Err(ApiError::conflict(
+            "ProposalContractMismatch",
+            "multisig proposal does not match this contract",
+        ));
+    }
+
+    if proposal.expires_at <= chrono::Utc::now() {
+        return Err(ApiError::conflict(
+            "ProposalExpired",
+            "multisig proposal has expired",
+        ));
+    }
+
+    if proposal.status != "approved" && proposal.status != "executed" {
+        return Err(ApiError::conflict(
+            "ProposalNotApproved",
+            "multisig proposal must be approved before performing this update",
+        ));
+    }
+
+    if proposal.approved_signatures < i64::from(proposal.required_approvals) {
+        return Err(ApiError::forbidden_with_error(
+            "ThresholdNotMet",
+            "required multisig signature threshold has not been met",
+        ));
+    }
+
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -436,7 +520,12 @@ fn derive_network_status(
 }
 
 async fn probe_network_health(client: &reqwest::Client, health_url: &str) -> bool {
-    match client.get(health_url).send().await {
+    let mut request = client.get(health_url);
+    let mut headers = reqwest::header::HeaderMap::new();
+    crate::request_tracing::inject_current_trace_context(&mut headers);
+    request = request.headers(headers);
+
+    match request.send().await {
         Ok(response) => response.status().is_success(),
         Err(_) => false,
     }
@@ -1336,15 +1425,17 @@ pub async fn list_contracts(
     let mut qb: QueryBuilder<'_, sqlx::Postgres> = QueryBuilder::new(
         "SELECT c.* FROM contracts c LEFT JOIN contract_interactions ci ON c.id = ci.contract_id ",
     );
-    qb.push("WHERE c.visibility = 'public'");
+    qb.push("WHERE (c.visibility = 'public'");
 
     if let Some(claims) = &claims {
-        qb.push(" OR (c.visibility = 'private' AND c.organization_id IN (");
+        qb.push(" OR c.visibility = 'private' AND c.organization_id IN (");
         qb.push("SELECT om.organization_id FROM organization_members om ");
         qb.push("JOIN publishers p ON p.id = om.publisher_id WHERE p.stellar_address = ");
         qb.push_bind(&claims.sub);
         qb.push("))");
     }
+
+    qb.push(")");
 
     if params.verified_only.unwrap_or(false) {
         qb.push(" AND c.is_verified = true");
@@ -1355,9 +1446,18 @@ pub async fn list_contracts(
         qb.push_bind(status);
     }
 
+    let mut categories = params.categories.clone().unwrap_or_default();
     if let Some(category) = &params.category {
-        qb.push(" AND c.category = ");
-        qb.push_bind(category);
+        categories.push(category.clone());
+    }
+    categories.retain(|category| !category.trim().is_empty());
+    if !categories.is_empty() {
+        qb.push(" AND c.category IN (");
+        let mut separated = qb.separated(", ");
+        for category in categories {
+            separated.push_bind(category);
+        }
+        separated.push_unseparated(")");
     }
 
     if let Some(networks) = params
@@ -1500,44 +1600,23 @@ pub async fn list_contracts(
         Err(err) => return db_internal_error("count contracts", err).into_response(),
     };
 
-    // Weights for ranking
-    let w_text = 1.0;
-    let w_pop = 0.5;
-    let w_rec = 0.3;
-    let w_rat = 0.4;
-    let w_pers = 0.5;
-
-    let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new("WITH contract_stats AS (\n");
-    query.push(
-        "    SELECT 
-                c.id,
-                COUNT(DISTINCT ci.id) as interaction_count,
-                COUNT(DISTINCT cv.id) as deployment_count,
-                COALESCE(AVG(r.rating), 0) as avg_rating,
-                COUNT(DISTINCT r.id) as review_count",
+    let response = PaginatedResponse::new(contracts, total, page, limit);
+    observe_search_query(
+        "contracts",
+        search_started_at,
+        params.query.as_deref(),
+        limit,
     );
+    Json(response).into_response()
+}
 
-    query.push(",\n                0 as user_interaction_count");
-
-    query.push(
-        "\n            FROM contracts c
-            LEFT JOIN contract_interactions ci ON c.id = ci.contract_id
-            LEFT JOIN contract_versions cv ON c.id = cv.contract_id
-            LEFT JOIN reviews r ON c.id = r.contract_id AND r.is_flagged = FALSE
-            GROUP BY c.id
-        ),\n",
-    );
-
-    query.push("ranked_contracts AS (\n");
-    query.push("    SELECT \n");
-    query.push("        c.*, \n");
-
-    if let Some(ref q) = params.query {
-        query.push("        ts_rank_cd(c.search_vector, plainto_tsquery('english', ");
-        query.push_bind(q);
-        query.push(")) as relevance_score,\n");
+fn csv_escape(value: &str) -> String {
+    let needs_quotes = value.contains(',') || value.contains('\"') || value.contains('\n');
+    if needs_quotes {
+        let escaped = value.replace('"', "\"\"");
+        format!("\"{}\"", escaped)
     } else {
-        query.push("        0.0 as relevance_score,\n");
+        value.to_string()
     }
 }
 
@@ -3796,9 +3875,11 @@ pub async fn get_publisher(
 )]
 pub async fn get_publisher_contracts(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    axum::extract::OriginalUri(uri): axum::extract::OriginalUri,
     Path(id): Path<String>,
     Query(query): Query<PublisherContractsQuery>,
-) -> ApiResult<Json<PaginatedResponse<Contract>>> {
+) -> ApiResult<crate::pagination::PagedJson<Contract>> {
     let publisher_uuid = Uuid::parse_str(&id).map_err(|_| {
         ApiError::bad_request(
             "InvalidPublisherId",
@@ -3806,18 +3887,15 @@ pub async fn get_publisher_contracts(
         )
     })?;
 
-    // Validate and cap limit (max 100)
     let limit = query.limit.clamp(1, 100);
     let offset = query.offset.max(0);
 
-    // Get total count
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM contracts WHERE publisher_id = $1")
         .bind(publisher_uuid)
         .fetch_one(&state.db)
         .await
         .map_err(|err| db_internal_error("get publisher contracts count", err))?;
 
-    // Fetch paginated results
     let contracts: Vec<Contract> = sqlx::query_as(
         "SELECT * FROM contracts WHERE publisher_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
     )
@@ -3829,9 +3907,9 @@ pub async fn get_publisher_contracts(
     .map_err(|err| db_internal_error("get publisher contracts", err))?;
 
     let page = (offset / limit) + 1;
-    let response = PaginatedResponse::new(contracts, total, page, limit);
+    let body = PaginatedResponse::new(contracts, total, page, limit);
 
-    Ok(Json(response))
+    Ok(crate::pagination::PagedJson::new(body, &headers, &uri))
 }
 
 /// Query for contract ABI and OpenAPI (optional version)
@@ -4643,6 +4721,14 @@ pub async fn update_contract_metadata(
             _ => db_internal_error("fetch contract for metadata update", err),
         })?;
 
+    require_multisig_approval_for_sensitive_update(
+        &state,
+        &headers,
+        &before,
+        "contract metadata update",
+    )
+    .await?;
+
     // Fetch before tags for audit log
     let before_tag_rows = sqlx::query!(
         "SELECT t.name FROM tags t JOIN contract_tags ct ON t.id = ct.tag_id WHERE ct.contract_id = $1",
@@ -4832,6 +4918,14 @@ pub async fn change_contract_publisher(
             _ => db_internal_error("fetch contract for publisher change", err),
         })?;
 
+    require_multisig_approval_for_sensitive_update(
+        &state,
+        &headers,
+        &before,
+        "contract publisher change",
+    )
+    .await?;
+
     let old_publisher_address: String =
         sqlx::query_scalar("SELECT stellar_address FROM publishers WHERE id = $1")
             .bind(before.publisher_id)
@@ -4932,6 +5026,14 @@ pub async fn update_contract_status(
             ),
             _ => db_internal_error("fetch contract for status update", err),
         })?;
+
+    require_multisig_approval_for_sensitive_update(
+        &state,
+        &headers,
+        &contract,
+        "contract status update",
+    )
+    .await?;
 
     let previous_status: Option<String> = sqlx::query_scalar(
         "SELECT status::text FROM verifications WHERE contract_id = $1 ORDER BY created_at DESC LIMIT 1",
@@ -6165,6 +6267,8 @@ pub async fn advanced_search_contracts(
     // Add joins for sorting/filtering if needed
     query_builder.push("LEFT JOIN contract_interactions ci ON c.id = ci.contract_id ");
     query_builder.push("LEFT JOIN contract_versions cv ON c.id = cv.contract_id ");
+    query_builder.push("LEFT JOIN contract_tags ct ON c.id = ct.contract_id ");
+    query_builder.push("LEFT JOIN tags t ON t.id = ct.tag_id ");
     query_builder.push("WHERE 1=1 ");
 
     // Recursively build the WHERE clause
@@ -6212,14 +6316,48 @@ pub async fn advanced_search_contracts(
     query_builder.push_bind(offset);
 
     let query = query_builder.build_query_as::<Contract>();
-    let contracts = query
+    let mut contracts = query
         .fetch_all(&state.db)
         .await
         .map_err(|err| db_internal_error("advanced search contracts", err))?;
 
+    // Fetch tags for these contracts (keeps output consistent with list_contracts)
+    let contract_ids: Vec<Uuid> = contracts.iter().map(|c| c.id).collect();
+    if !contract_ids.is_empty() {
+        let tag_rows = sqlx::query!(
+            r#"
+            SELECT ct.contract_id, t.id, t.name, t.color
+            FROM tags t
+            JOIN contract_tags ct ON t.id = ct.tag_id
+            WHERE ct.contract_id = ANY($1)
+            "#,
+            &contract_ids
+        )
+        .fetch_all(&state.db)
+        .await
+        .map_err(|err| db_internal_error("fetch tags (advanced search)", err))?;
+
+        let mut tags_map: HashMap<Uuid, Vec<shared::Tag>> = HashMap::new();
+        for row in tag_rows {
+            tags_map.entry(row.contract_id).or_default().push(shared::Tag {
+                id: row.id,
+                name: row.name,
+                color: row.color,
+            });
+        }
+
+        for contract in &mut contracts {
+            if let Some(tags) = tags_map.remove(&contract.id) {
+                contract.tags = tags;
+            }
+        }
+    }
+
     // Count total matches (naively for now, same filters)
     let mut count_builder: sqlx::QueryBuilder<'_, sqlx::Postgres> =
         sqlx::QueryBuilder::new("SELECT COUNT(DISTINCT c.id) FROM contracts c ");
+    count_builder.push("LEFT JOIN contract_tags ct ON c.id = ct.contract_id ");
+    count_builder.push("LEFT JOIN tags t ON t.id = ct.tag_id ");
     count_builder.push("WHERE 1=1 ");
     build_where_clause(&mut count_builder, &req.query)?;
 
@@ -6286,6 +6424,7 @@ fn apply_condition<'a>(
         "network" => "c.network",
         "verified" => "c.is_verified",
         "publisher" => "c.publisher_id",
+        "tag" => "t.name",
         _ => {
             return Err(ApiError::bad_request(
                 "InvalidField",
@@ -6294,42 +6433,95 @@ fn apply_condition<'a>(
         }
     };
 
+    let string_value = || {
+        cond.value.as_str().ok_or_else(|| {
+            ApiError::bad_request(
+                "InvalidValue",
+                format!(
+                    "Field '{}' expects a string value for operator '{:?}'",
+                    cond.field, cond.operator
+                ),
+            )
+        })
+    };
+
     builder.push(field);
     match cond.operator {
         FieldOperator::Eq => {
             builder.push(" = ");
-            builder.push_bind(cond.value.as_str().unwrap_or_default());
+            if cond.field == "verified" {
+                let value = cond.value.as_bool().ok_or_else(|| {
+                    ApiError::bad_request(
+                        "InvalidValue",
+                        "Field 'verified' expects a boolean value",
+                    )
+                })?;
+                builder.push_bind(value);
+            } else {
+                builder.push_bind(string_value()?);
+            }
         }
         FieldOperator::Ne => {
             builder.push(" != ");
-            builder.push_bind(cond.value.as_str().unwrap_or_default());
+            if cond.field == "verified" {
+                let value = cond.value.as_bool().ok_or_else(|| {
+                    ApiError::bad_request(
+                        "InvalidValue",
+                        "Field 'verified' expects a boolean value",
+                    )
+                })?;
+                builder.push_bind(value);
+            } else {
+                builder.push_bind(string_value()?);
+            }
         }
         FieldOperator::Gt => {
             builder.push(" > ");
-            builder.push_bind(cond.value.as_str().unwrap_or_default());
+            builder.push_bind(string_value()?);
         }
         FieldOperator::Lt => {
             builder.push(" < ");
-            builder.push_bind(cond.value.as_str().unwrap_or_default());
+            builder.push_bind(string_value()?);
         }
         FieldOperator::In => {
             builder.push(" IN (");
-            if let Some(arr) = cond.value.as_array() {
-                let mut separated = builder.separated(", ");
-                for val in arr {
-                    separated.push_bind(val.as_str().unwrap_or_default().to_string());
+            let arr = cond.value.as_array().ok_or_else(|| {
+                ApiError::bad_request(
+                    "InvalidValue",
+                    format!("Field '{}' expects an array value for operator 'in'", cond.field),
+                )
+            })?;
+
+            let mut separated = builder.separated(", ");
+            for val in arr {
+                if cond.field == "verified" {
+                    let b = val.as_bool().ok_or_else(|| {
+                        ApiError::bad_request(
+                            "InvalidValue",
+                            "Field 'verified' expects a boolean array value",
+                        )
+                    })?;
+                    separated.push_bind(b);
+                } else {
+                    let s = val.as_str().ok_or_else(|| {
+                        ApiError::bad_request(
+                            "InvalidValue",
+                            format!("Field '{}' expects a string array value", cond.field),
+                        )
+                    })?;
+                    separated.push_bind(s.to_string());
                 }
             }
             builder.push(")");
         }
         FieldOperator::Contains => {
             builder.push(" ILIKE ");
-            let val = format!("%{}%", cond.value.as_str().unwrap_or_default());
+            let val = format!("%{}%", string_value()?);
             builder.push_bind(val);
         }
         FieldOperator::StartsWith => {
             builder.push(" ILIKE ");
-            let val = format!("{}%", cond.value.as_str().unwrap_or_default());
+            let val = format!("{}%", string_value()?);
             builder.push_bind(val);
         }
     }
