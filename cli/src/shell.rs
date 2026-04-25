@@ -7,11 +7,13 @@ use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
-use rustyline::{Context as RustyContext, Editor};
+use rustyline::{Context as RustyContext, Editor, Helper};
 use shlex;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+use crate::Cli;
 
 pub struct ShellContext {
     pub api_url: String,
@@ -218,7 +220,7 @@ fn show_shell_help() {
     println!("  unset <k>              Remove a session variable");
     println!("  vars                   List session variables");
     println!(
-        "\nVariables can be referenced as $name or ${name}. Built-ins: $network, $contract, $api_url."
+        "\nVariables can be referenced as $name or ${{name}}. Built-ins: $network, $contract, $api_url."
     );
     println!("\nAny other input is treated as a normal CLI command (e.g., 'search gravity' or 'info <id>').");
     println!("Multiline: end a line with \\ or leave brackets/quotes open.\n");
@@ -349,10 +351,15 @@ fn handle_repl_builtin(
         "use" => {
             if args.len() > 1 {
                 context.contract_id = Some(args[1].clone());
+                context.vars.insert("contract".to_string(), args[1].clone());
                 println!("Context set to contract: {}", args[1].bright_magenta());
             } else {
                 context.contract_id = None;
+                context.vars.remove("contract");
                 println!("Context cleared (no active contract)");
+            }
+            if let Some(helper) = rl.helper_mut() {
+                helper.update_vars(context);
             }
             Ok(true)
         }
@@ -362,6 +369,9 @@ fn handle_repl_builtin(
                 context
                     .vars
                     .insert("network".to_string(), context.network.clone());
+                if let Some(helper) = rl.helper_mut() {
+                    helper.update_vars(context);
+                }
                 println!("Network set to: {}", context.network.bright_blue());
                 Ok(true)
             } else {
@@ -499,7 +509,9 @@ impl ReplHelper {
             "unset",
             "vars",
             "ls",
-        ]);
+        ]
+        .into_iter()
+        .map(str::to_string));
         commands.sort();
         commands.dedup();
 
@@ -587,6 +599,7 @@ impl Hinter for ReplHelper {
 }
 
 impl Highlighter for ReplHelper {}
+impl Helper for ReplHelper {}
 
 impl Validator for ReplHelper {
     fn validate(&self, ctx: &mut ValidationContext<'_>) -> rustyline::Result<ValidationResult> {
