@@ -3,13 +3,12 @@ use crate::openapi;
 use crate::{
     ab_test_handlers, analytics_handlers, auth, auth_handlers, batch_verify_handlers,
     breaking_changes, canary_handlers, category_handlers, clone_federation_handlers,
-    compatibility_testing_handlers, contract_events, custom_metrics_handlers,
-    deprecation_handlers, handlers, interoperability_handlers, metrics_handler,
-    migration_handlers, org_handlers, performance_handlers, resource_handlers,
-    security_scan_handlers, similarity_handlers, simulation_handlers, state::AppState,
-    subscription_handlers, websocket,
+    compatibility_testing_handlers, contract_events, custom_metrics_handlers, deprecation_handlers,
+    gas_estimation_handlers, governance_handlers, handlers, interoperability_handlers,
+    metrics_handler, migration_handlers, org_handlers, patch_handlers, performance_handlers,
+    recommendation_handlers, resource_handlers, security_scan_handlers, similarity_handlers,
+    simulation_handlers, state::AppState, subscription_handlers, websocket,
 };
-
 
 use axum::{
     middleware,
@@ -38,10 +37,7 @@ pub fn contract_routes() -> Router<AppState> {
             "/api/contracts",
             get(handlers::list_contracts).post(handlers::publish_contract),
         )
-        .route(
-            "/api/contracts/tags",
-            get(handlers::list_tags),
-        )
+        .route("/api/contracts/tags", get(handlers::list_tags))
         .route(
             "/api/contracts/export",
             post(handlers::export_contract_metadata),
@@ -74,6 +70,7 @@ pub fn contract_routes() -> Router<AppState> {
             "/api/contracts/trending",
             get(handlers::get_trending_contracts),
         )
+        .route("/contracts/trending", get(handlers::get_trending_contracts))
         .route("/api/contracts/batch", post(handlers::get_contracts_batch))
         .route("/contracts/batch", post(handlers::get_contracts_batch))
         .route("/api/contracts/graph", get(handlers::get_contract_graph))
@@ -184,16 +181,16 @@ pub fn contract_routes() -> Router<AppState> {
             "/api/analytics/dashboard",
             get(analytics_handlers::get_analytics_summary),
         )
-
         .route(
             "/api/contracts/:id/dependencies",
-            get(crate::dependency_handlers::get_contract_dependencies),
+            get(crate::dependency_handlers::get_contract_dependencies)
+                // Issue #610: POST endpoint to declare/save dependencies
+                .post(dependency_handlers::declare_contract_dependencies),
         )
         .route(
             "/api/contracts/:id/graph",
             get(handlers::get_contract_local_graph),
         )
-
         .route(
             "/api/contracts/:id/trust-score",
             get(handlers::get_trust_score),
@@ -215,7 +212,15 @@ pub fn contract_routes() -> Router<AppState> {
             get(recommendation_handlers::get_contract_recommendations),
         )
         .route(
+            "/api/contracts/:id/related",
+            get(recommendation_handlers::get_contract_recommendations),
+        )
+        .route(
             "/contracts/:id/recommendations",
+            get(recommendation_handlers::get_contract_recommendations),
+        )
+        .route(
+            "/contracts/:id/related",
             get(recommendation_handlers::get_contract_recommendations),
         )
         .route(
@@ -386,6 +391,11 @@ pub fn publisher_routes() -> Router<AppState> {
             "/api/publishers/:id/contracts",
             get(handlers::get_publisher_contracts),
         )
+        // Issue #603: publisher verification badge endpoint
+        .route(
+            "/api/publishers/:id/verify",
+            post(publisher_verification_handlers::verify_publisher),
+        )
 }
 
 pub fn contributor_routes() -> Router<AppState> {
@@ -429,6 +439,35 @@ pub fn health_routes() -> Router<AppState> {
         .route(
             "/api/analytics/summary",
             get(analytics_handlers::get_analytics_summary),
+        )
+        .route(
+            "/api/analytics/timeseries",
+            get(analytics_handlers::get_analytics_timeseries),
+        )
+}
+
+pub fn governance_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/governance/proposals",
+            post(governance_handlers::create_proposal).get(governance_handlers::list_proposals),
+        )
+        .route(
+            "/api/governance/proposals/:id",
+            get(governance_handlers::get_proposal),
+        )
+        .route(
+            "/api/governance/proposals/:id/votes",
+            post(governance_handlers::cast_vote).get(governance_handlers::get_vote_tally),
+        )
+        .route(
+            "/api/governance/proposals/:id/execute",
+            post(governance_handlers::execute_proposal),
+        )
+        .route(
+            "/api/governance/contracts/:id/voting-rights",
+            get(governance_handlers::list_voting_rights)
+                .post(governance_handlers::upsert_voting_rights),
         )
 }
 
@@ -486,8 +525,15 @@ pub fn compatibility_dashboard_routes() -> Router<AppState> {
     )
 }
 
-pub fn category_routes() -> Router<AppState> {
-    Router::new().route("/api/categories", get(category_handlers::list_categories))
+/// Issue #619 — mutation testing routes.
+pub fn mutation_testing_routes() -> Router<AppState> {
+    Router::new()
+        // Trigger a new mutation test run
+        .route(
+            "/api/contracts/:id/mutations",
+            post(mutation_testing_handlers::run_mutation_tests)
+                .get(mutation_testing_handlers::list_mutation_runs),
+        )
 }
 
 pub fn canary_routes() -> Router<AppState> {
@@ -752,8 +798,7 @@ pub fn subscription_routes() -> Router<AppState> {
         // Webhooks
         .route(
             "/api/webhooks",
-            get(subscription_handlers::list_webhooks)
-                .post(subscription_handlers::create_webhook),
+            get(subscription_handlers::list_webhooks).post(subscription_handlers::create_webhook),
         )
         .route(
             "/api/webhooks/:id",

@@ -1626,7 +1626,7 @@ pub struct RecordPerformanceMetricRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RecordPerformanceBenchmarkRequest {
-    pub contract_id: String,
+    pub contract_id: Option<String>,
     pub contract_version_id: Option<String>,
     pub benchmark_name: String,
     pub execution_time_ms: f64,
@@ -1933,6 +1933,7 @@ pub struct DailyAggregate {
     pub verification_count: i32,
     pub publish_count: i32,
     pub version_count: i32,
+    pub update_count: i32,
     pub total_events: i32,
     pub unique_users: i32,
     pub network_breakdown: serde_json::Value,
@@ -3532,7 +3533,9 @@ pub enum ScanStatus {
 }
 
 /// Security issue severity
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq, PartialOrd)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq, PartialOrd,
+)]
 #[sqlx(type_name = "issue_severity_type", rename_all = "lowercase")]
 pub enum IssueSeverity {
     Low,
