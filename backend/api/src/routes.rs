@@ -830,6 +830,39 @@ pub fn subscription_routes() -> Router<AppState> {
 // FORMAL VERIFICATION ROUTES
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTRACT INTERACTION GRAPH ANALYSIS ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+pub fn graph_analysis_routes() -> Router<AppState> {
+    Router::new()
+        // Full analysis report: clusters + critical contracts + cycles
+        .route(
+            "/api/contracts/graph/analysis",
+            get(graph_analysis_handlers::get_graph_analysis),
+        )
+        // Sub-network / community list
+        .route(
+            "/api/contracts/graph/clusters",
+            get(graph_analysis_handlers::get_graph_clusters),
+        )
+        // Sub-network detail by cluster ID
+        .route(
+            "/api/contracts/graph/subnetwork/:cluster_id",
+            get(graph_analysis_handlers::get_subnetwork),
+        )
+        // Critical contract ranking
+        .route(
+            "/api/contracts/graph/critical",
+            get(graph_analysis_handlers::get_critical_contracts),
+        )
+        // Vulnerability propagation from a specific contract
+        .route(
+            "/api/contracts/:id/vulnerability-propagation",
+            get(graph_analysis_handlers::get_vulnerability_propagation),
+        )
+}
+
 pub fn formal_verification_routes() -> Router<AppState> {
     Router::new()
         .route(
