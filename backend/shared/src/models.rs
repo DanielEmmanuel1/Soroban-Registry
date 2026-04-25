@@ -1,7 +1,9 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::de::{self, SeqAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::fmt;
 use uuid::Uuid;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -156,7 +158,7 @@ pub struct NetworkListResponse {
 }
 
 /// Network where the contract is deployed
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "network_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Network {
@@ -173,6 +175,97 @@ impl std::fmt::Display for Network {
             Network::Futurenet => write!(f, "futurenet"),
         }
     }
+}
+
+fn parse_network_value<E: de::Error>(value: &str) -> Result<Network, E> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "mainnet" => Ok(Network::Mainnet),
+        "testnet" => Ok(Network::Testnet),
+        "futurenet" => Ok(Network::Futurenet),
+        _ => Err(E::custom(format!(
+            "invalid network `{value}`; expected mainnet, testnet, or futurenet"
+        ))),
+    }
+}
+
+fn deserialize_optional_networks<'de, D>(deserializer: D) -> Result<Option<Vec<Network>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct NetworksVisitor;
+
+    impl<'de> Visitor<'de> for NetworksVisitor {
+        type Value = Option<Vec<Network>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a comma-separated string or sequence of network names")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut networks = Vec::new();
+            while let Some(network) = seq.next_element::<Network>()? {
+                networks.push(network);
+            }
+
+            if networks.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(networks))
+            }
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            let networks: Result<Vec<_>, _> = value
+                .split(',')
+                .map(str::trim)
+                .filter(|network| !network.is_empty())
+                .map(parse_network_value)
+                .collect();
+
+            let networks = networks?;
+            if networks.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(networks))
+            }
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            self.visit_str(&value)
+        }
+
+        fn visit_borrowed_str<E>(self, value: &'de str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            self.visit_str(value)
+        }
+    }
+
+    deserializer.deserialize_any(NetworksVisitor)
 }
 
 /// Upgrade strategy for contract upgrades
@@ -764,6 +857,7 @@ pub struct ContractSearchParams {
     pub query: Option<String>,
     pub network: Option<Network>,
     /// Multiple networks filter (e.g. ?networks=mainnet&networks=testnet)
+    #[serde(default, deserialize_with = "deserialize_optional_networks")]
     pub networks: Option<Vec<Network>>,
     pub verified_only: Option<bool>,
     /// Filter by verification_status (unverified, pending, verified, failed)
@@ -937,6 +1031,37 @@ pub struct AdvancedSearchRequest {
     pub offset: Option<i64>,
     pub sort_by: Option<SortBy>,
     pub sort_order: Option<SortOrder>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ContractSearchParams, Network};
+
+    #[test]
+    fn parses_comma_separated_networks() {
+        let params: ContractSearchParams = serde_json::from_str(
+            r#"{"networks":"mainnet,testnet"}"#,
+        )
+        .expect("query params should deserialize");
+
+        assert_eq!(
+            params.networks,
+            Some(vec![Network::Mainnet, Network::Testnet])
+        );
+    }
+
+    #[test]
+    fn parses_sequence_networks() {
+        let params: ContractSearchParams = serde_json::from_str(
+            r#"{"networks":["mainnet","futurenet"]}"#,
+        )
+        .expect("query params should deserialize");
+
+        assert_eq!(
+            params.networks,
+            Some(vec![Network::Mainnet, Network::Futurenet])
+        );
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, utoipa::ToSchema)]

@@ -1420,15 +1420,17 @@ pub async fn list_contracts(
     let mut qb: QueryBuilder<'_, sqlx::Postgres> = QueryBuilder::new(
         "SELECT c.* FROM contracts c LEFT JOIN contract_interactions ci ON c.id = ci.contract_id ",
     );
-    qb.push("WHERE c.visibility = 'public'");
+    qb.push("WHERE (c.visibility = 'public'");
 
     if let Some(claims) = &claims {
-        qb.push(" OR (c.visibility = 'private' AND c.organization_id IN (");
+        qb.push(" OR c.visibility = 'private' AND c.organization_id IN (");
         qb.push("SELECT om.organization_id FROM organization_members om ");
         qb.push("JOIN publishers p ON p.id = om.publisher_id WHERE p.stellar_address = ");
         qb.push_bind(&claims.sub);
         qb.push("))");
     }
+
+    qb.push(")");
 
     if params.verified_only.unwrap_or(false) {
         qb.push(" AND c.is_verified = true");
@@ -1439,9 +1441,18 @@ pub async fn list_contracts(
         qb.push_bind(status);
     }
 
+    let mut categories = params.categories.clone().unwrap_or_default();
     if let Some(category) = &params.category {
-        qb.push(" AND c.category = ");
-        qb.push_bind(category);
+        categories.push(category.clone());
+    }
+    categories.retain(|category| !category.trim().is_empty());
+    if !categories.is_empty() {
+        qb.push(" AND c.category IN (");
+        let mut separated = qb.separated(", ");
+        for category in categories {
+            separated.push_bind(category);
+        }
+        separated.push_unseparated(")");
     }
 
     if let Some(networks) = params
