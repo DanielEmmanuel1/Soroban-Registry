@@ -28,6 +28,7 @@ mod dependency_handlers;
 mod deprecation_handlers;
 mod error;
 mod events;
+mod favorites_handlers;
 mod handlers;
 mod health;
 pub mod health_monitor;

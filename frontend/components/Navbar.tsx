@@ -186,6 +186,7 @@ export default function Navbar() {
     const lng = i18n.resolvedLanguage || 'en';
     const pathname = usePathname() ?? '';
     const scrolled = useScrolled();
+    const { favoritesCount } = useFavorites();
 
     const [mobileOpen,    setMobileOpen]    = useState(false);
     const [exploreOpen,   setExploreOpen]   = useState(false);
@@ -354,6 +355,24 @@ export default function Navbar() {
                             <LanguageSelector lng={lng} />
                             <ThemeToggle />
                             <NotificationBell />
+
+                            {/* Favorites link */}
+                            <Link
+                                href="/favorites"
+                                aria-label="Your favorites"
+                                className={`relative p-1.5 rounded-md transition-colors ${
+                                    isActive('/favorites')
+                                        ? 'text-primary bg-primary/10'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                }`}
+                            >
+                                <Star className="w-5 h-5" />
+                                {favoritesCount > 0 && (
+                                    <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[1rem] h-4 px-0.5 text-[10px] font-bold text-primary-foreground bg-primary rounded-full">
+                                        {favoritesCount > 99 ? '99+' : favoritesCount}
+                                    </span>
+                                )}
+                            </Link>
 
                             {/* Profile dropdown */}
                             <div
@@ -552,28 +571,38 @@ export default function Navbar() {
                     <div className="mx-3 border-t border-border" />
 
                     {/* All nav links */}
+                    {/* Navigation links */}
                     <div className="flex-1 overflow-y-auto py-3 px-3">
                         <p className="px-2 pb-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Navigation</p>
                         <nav className="flex flex-col gap-0.5" aria-label="Mobile navigation links">
-                            {QUICK_LINKS.map(({ href, label, icon: Icon }) => (
+                            {[
+                                { href: '/contracts',       label: 'Browse Contracts',  icon: Package    },
+                                { href: '/compare',         label: 'Compare Contracts', icon: Columns2   },
+                                { href: '/verify-contract', label: 'Verify Contract',   icon: ShieldCheck},
+                                { href: '/stats',           label: 'Statistics',        icon: BarChart2  },
+                                { href: '/analytics',       label: 'Analytics',         icon: PieChart   },
+                                { href: '/templates',       label: 'Templates',         icon: Layers     },
+                                { href: '/graph',           label: 'Dependency Graph',  icon: GitBranch  },
+                                { href: '/favorites',       label: 'My Favorites',      icon: Star       },
+                            ].map(({ href, label, icon: Icon }) => (
                                 <Link
                                     key={href}
                                     href={href}
                                     onClick={() => setMobileOpen(false)}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                                        isActive(href)
+                                        pathname === href
                                             ? 'text-primary bg-primary/10'
                                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                                     }`}
-                                    aria-current={isActive(href) ? 'page' : undefined}
+                                    aria-current={pathname === href ? 'page' : undefined}
                                 >
                                     <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                                        isActive(href) ? 'bg-primary/20' : 'bg-accent'
+                                        pathname === href ? 'bg-primary/20' : 'bg-accent'
                                     }`}>
-                                        <Icon className={`w-3.5 h-3.5 ${isActive(href) ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <Icon className={`w-3.5 h-3.5 ${pathname === href ? 'text-primary' : 'text-muted-foreground'}`} />
                                     </span>
                                     {label}
-                                    {isActive(href) && (
+                                    {pathname === href && (
                                         <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
                                     )}
                                 </Link>

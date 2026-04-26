@@ -54,6 +54,7 @@ pub struct ContractDeployment {
     pub op_id: String,
     pub tx_id: String,
     pub ledger_sequence: u64,
+    pub deployed_at: String,
 }
 
 /// RPC response for ledgers

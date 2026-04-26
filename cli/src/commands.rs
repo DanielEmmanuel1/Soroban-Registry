@@ -975,76 +975,193 @@ mod contract_test_helpers_tests {
     }
 }
 
-pub async fn list(api_url: &str, limit: usize, network: Network, json: bool) -> Result<()> {
+pub async fn contract_list(
+    api_url: &str,
+    limit: usize,
+    offset: usize,
+    network: Option<crate::config::Network>,
+    category: Option<String>,
+    format: &str,
+) -> Result<()> {
     let client = reqwest::Client::new();
-    let url = format!(
-        "{}/api/contracts?page_size={}&network={}",
-        api_url, limit, network
-    );
+    let mut query = vec![
+        ("page_size", limit.to_string()),
+        ("page", ((offset / limit) + 1).to_string()),
+    ];
 
+    if let Some(net) = network {
+        query.push(("network", net.to_string()));
+    }
+    if let Some(cat) = category {
+        query.push(("category", cat));
+    }
+
+    let url = format!("{}/api/contracts", api_url.trim_end_matches('/'));
     let response = client
         .get(&url)
+        .query(&query)
         .send()
         .await
         .context("Failed to list contracts")?;
 
-    let data: serde_json::Value = response.json().await?;
-    let items = data["items"].as_array().context("Invalid response")?;
+    if !response.status().is_success() {
+        anyhow::bail!("API returned error: {}", response.status());
+    }
 
-    if json {
-        let contracts: Vec<serde_json::Value> = items
-            .iter()
-            .map(|c| -> Result<_> {
-                Ok(serde_json::json!({
-                    "id":          crate::conversions::as_str(&c["contract_id"], "contract_id")?,
-                    "name":        crate::conversions::as_str(&c["name"], "name")?,
-                    "is_verified": crate::conversions::as_bool(&c["is_verified"], "is_verified")?,
-                    "network":     crate::conversions::as_str(&c["network"], "network")?,
-                }))
-            })
-            .collect::<Result<_, _>>()?;
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&serde_json::json!({ "contracts": contracts }))?
-        );
+    let data: serde_json::Value = response.json().await?;
+    let items = data["items"]
+        .as_array()
+        .context("Invalid response format")?;
+
+    if format == "json" {
+        println!("{}", serde_json::to_string_pretty(&data)?);
         return Ok(());
     }
 
-    println!("\n{}", "Recent Contracts:".bold().cyan());
-    println!("{}", "=".repeat(80).cyan());
+    if format == "csv" {
+        println!("contract_id,name,network,is_verified,category");
+        for item in items {
+            println!(
+                "{},{},{},{},{}",
+                item["contract_id"].as_str().unwrap_or(""),
+                item["name"].as_str().unwrap_or(""),
+                item["network"].as_str().unwrap_or(""),
+                item["is_verified"].as_bool().unwrap_or(false),
+                item["category"].as_str().unwrap_or("")
+            );
+        }
+        return Ok(());
+    }
+
+    // Default: Table
+    println!("\n{}", "Contract Registry".bold().cyan());
+    println!("{}", "=".repeat(100).cyan());
 
     if items.is_empty() {
-        println!("{}", "No contracts found.".yellow());
+        println!("{}", "No contracts found matching the criteria.".yellow());
         return Ok(());
     }
 
-    for (i, contract) in items.iter().enumerate() {
-        let name = crate::conversions::as_str(&contract["name"], "name")?;
-        let contract_id = crate::conversions::as_str(&contract["contract_id"], "contract_id")?;
-        let is_verified = crate::conversions::as_bool(&contract["is_verified"], "is_verified")?;
-        let network = crate::conversions::as_str(&contract["network"], "network")?;
+    println!(
+        "{:<45} {:<25} {:<10} {:<10}",
+        "CONTRACT ID".bold(),
+        "NAME".bold(),
+        "NETWORK".bold(),
+        "VERIFIED".bold()
+    );
+    println!("{}", "-".repeat(100));
+
+    for item in items {
+        let contract_id = item["contract_id"].as_str().unwrap_or("");
+        let name = item["name"].as_str().unwrap_or("");
+        let net = item["network"].as_str().unwrap_or("");
+        let verified = if item["is_verified"].as_bool().unwrap_or(false) {
+            "Yes".green()
+        } else {
+            "No".red()
+        };
 
         println!(
-            "\n{}. {} {}",
-            i + 1,
-            name.bold(),
-            if is_verified {
-                "✓".green()
-            } else {
-                "".normal()
-            }
-        );
-        println!(
-            "   {} | {}",
-            contract_id.bright_black(),
-            network.bright_blue()
+            "{:<45} {:<25} {:<10} {:<10}",
+            contract_id,
+            name.truncate_str(23),
+            net,
+            verified
         );
     }
 
-    println!("\n{}", "=".repeat(80).cyan());
+    let total = data["total"].as_u64().unwrap_or(0);
+    println!("{}", "-".repeat(100));
+    println!(
+        "Showing {}-{} of {} contracts",
+        offset + 1,
+        offset + items.len(),
+        total
+    );
     println!();
 
     Ok(())
+}
+
+pub async fn contract_info(api_url: &str, id: &str) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/contracts/{}", api_url.trim_end_matches('/'), id);
+    
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .context("Failed to fetch contract info")?;
+
+    if !response.status().is_success() {
+        if response.status() == 404 {
+            anyhow::bail!("Contract not found: {}", id);
+        }
+        anyhow::bail!("API returned error: {}", response.status());
+    }
+
+    let data: serde_json::Value = response.json().await?;
+    
+    println!("\n{}", "Contract Details".bold().cyan());
+    println!("{}", "=".repeat(80).cyan());
+    
+    println!("{:<20} {}", "Name:".bold(), data["name"].as_str().unwrap_or("Unknown"));
+    println!("{:<20} {}", "ID:".bold(), data["contract_id"].as_str().unwrap_or("Unknown"));
+    println!("{:<20} {}", "Network:".bold(), data["network"].as_str().unwrap_or("Unknown"));
+    println!("{:<20} {}", "Category:".bold(), data["category"].as_str().unwrap_or("None"));
+    
+    let verified = if data["is_verified"].as_bool().unwrap_or(false) {
+        "Yes".green()
+    } else {
+        "No".red()
+    };
+    println!("{:<20} {}", "Verified:".bold(), verified);
+    
+    if let Some(desc) = data["description"].as_str() {
+        println!("{:<20} {}", "Description:".bold(), desc);
+    }
+    
+    println!("\n{}", "Resources".bold().yellow());
+    println!("{:<20} {}", "WASM Hash:".bold(), data["wasm_hash"].as_str().unwrap_or("N/A"));
+    
+    if let Some(abi) = data["abi"].as_object() {
+        println!("{:<20} {} methods", "ABI:".bold(), abi.len());
+    }
+
+    println!();
+    Ok(())
+}
+
+// Helper for string truncation
+trait Truncate {
+    fn truncate_str(&self, max: usize) -> String;
+}
+
+impl Truncate for str {
+    fn truncate_str(&self, max: usize) -> String {
+        if self.len() > max {
+            format!("{}...", &self[..max - 3])
+        } else {
+            self.to_string()
+        }
+    }
+}
+
+pub async fn list(
+    api_url: &str,
+    limit: usize,
+    network: crate::config::Network,
+    json: bool,
+) -> Result<()> {
+    contract_list(
+        api_url,
+        limit,
+        0,
+        Some(network),
+        None,
+        if json { "json" } else { "table" },
+    )
+    .await
 }
 
 fn extract_migration_id(migration: &serde_json::Value) -> Result<String> {
@@ -3522,6 +3639,144 @@ pub fn sla_status(id: &str) -> Result<()> {
     println!("\nStatus: {}", "Active".green());
     println!("Uptime: {}%", "99.9".green());
     println!("Avg Latency: {}ms", "45.2".green());
+
+    Ok(())
+}
+
+pub async fn snapshot_create(api_url: &str, contract_id: &str) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/contracts/{}/snapshots", api_url, contract_id);
+
+    println!("\n{}", "Creating contract snapshot...".bold().cyan());
+
+    let response = client
+        .post(&url)
+        .send()
+        .await
+        .context("Failed to create snapshot")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Failed to create snapshot: {}",
+            response.text().await.unwrap_or_default()
+        );
+    }
+
+    let snapshot: serde_json::Value = response.json().await?;
+
+    println!("{}", "✓ Snapshot created successfully!".green().bold());
+    println!("  {}: {}", "ID".bold(), snapshot["id"].as_str().unwrap_or(""));
+    println!("  {}: {}", "Version".bold(), snapshot["version_number"].as_i64().unwrap_or(0));
+    println!("  {}: {}", "Created At".bold(), snapshot["created_at"].as_str().unwrap_or(""));
+    println!();
+
+    Ok(())
+}
+
+pub async fn snapshot_list(api_url: &str, contract_id: &str) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/contracts/{}/snapshots", api_url, contract_id);
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .context("Failed to list snapshots")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Failed to list snapshots: {}",
+            response.text().await.unwrap_or_default()
+        );
+    }
+
+    let snapshots: Vec<serde_json::Value> = response.json().await?;
+
+    println!("\n{}", "Contract Snapshots:".bold().cyan());
+    println!("{}", "=".repeat(80).cyan());
+
+    if snapshots.is_empty() {
+        println!("{}", "No snapshots found.".yellow());
+        return Ok(());
+    }
+
+    for s in snapshots {
+        println!(
+            "  v{} - {} [{}]",
+            s["version_number"].as_i64().unwrap_or(0),
+            s["created_at"].as_str().unwrap_or("").bright_black(),
+            s["id"].as_str().unwrap_or("").cyan()
+        );
+    }
+    println!();
+
+    Ok(())
+}
+
+pub async fn snapshot_get(api_url: &str, contract_id: &str, timestamp: &str) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/contracts/{}/snapshots?timestamp={}", api_url, contract_id, timestamp);
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .context("Failed to fetch snapshot")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Failed to fetch snapshot: {}",
+            response.text().await.unwrap_or_default()
+        );
+    }
+
+    let snapshot: serde_json::Value = response.json().await?;
+    println!("\n{}", "Snapshot Details:".bold().cyan());
+    println!("{}", "=".repeat(80).cyan());
+    println!("{}", serde_json::to_string_pretty(&snapshot)?.green());
+    println!();
+
+    Ok(())
+}
+
+pub async fn snapshot_diff(api_url: &str, contract_id: &str, v1: i32, v2: i32) -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/contracts/{}/versions/{}/diff/{}", api_url, contract_id, v1, v2);
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .context("Failed to fetch diff")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Failed to fetch diff: {}",
+            response.text().await.unwrap_or_default()
+        );
+    }
+
+    let diff: shared::models::VersionDiff = response.json().await?;
+
+    println!("\n{}", format!("Diff between v{} and v{}:", v1, v2).bold().cyan());
+    println!("{}", "=".repeat(80).cyan());
+
+    if diff.added.is_empty() && diff.removed.is_empty() && diff.modified.is_empty() {
+        println!("{}", "No differences found.".green());
+        return Ok(());
+    }
+
+    for add in diff.added {
+        println!("  {} {}: {}", "+".green().bold(), add.field.bold(), add.to.to_string().green());
+    }
+    for rm in diff.removed {
+        println!("  {} {}: {}", "-".red().bold(), rm.field.bold(), rm.from.to_string().red());
+    }
+    for modif in diff.modified {
+        println!("  {} {}: {} -> {}", "~".yellow().bold(), modif.field.bold(), modif.from.to_string().red(), modif.to.to_string().green());
+    }
+
+    println!();
 
     Ok(())
 }

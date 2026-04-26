@@ -19,6 +19,7 @@ import { useTranslation } from '@/lib/i18n/client';
 import VerificationBadge from '@/components/verification/VerificationBadge';
 import HealthWidget from './HealthWidget';
 import ContractQuickViewModal from './contracts/ContractQuickViewModal';
+import FavoriteButton from './FavoriteButton';
 
 interface ContractCardProps {
   contract: Contract;
@@ -199,6 +200,7 @@ export default function ContractCard({ contract }: ContractCardProps) {
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 <span>{copied ? t('contractCard.copied') : t('contractCard.copyAddress')}</span>
               </button>
+              <FavoriteButton contractId={contract.id} size="sm" />
             </div>
           </div>
         </div>
