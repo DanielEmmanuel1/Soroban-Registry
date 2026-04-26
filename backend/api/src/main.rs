@@ -119,37 +119,20 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Load environment variables
-    dotenv().ok();
+    // Load and validate configuration (#768)
+    let config = config::load_config()?;
 
     // Initialize structured JSON tracing (ELK/Splunk compatible)
     request_tracing::init_json_tracing();
-
-    // Fail fast on startup when JWT configuration is invalid.
-    if let Err(err) = auth::AuthManager::from_env() {
-        tracing::error!(
-            error = %err,
-            "JWT authentication configuration is invalid. Set JWT_SECRET to a strong value with at least {} characters.",
-            auth::MIN_JWT_SECRET_LEN
-        );
-        return Err(anyhow::anyhow!(
-            "Invalid JWT authentication configuration: {}",
-            err
-        ));
-    }
-
-    // Database connection with dynamic pool size
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let logical_cores = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
 
-    let default_max_pool = (logical_cores * 2).max(10);
     let max_pool_size = std::env::var("DB_MAX_POOL_SIZE")
         .ok()
         .and_then(|s| s.parse::<u32>().ok())
-        .unwrap_or(default_max_pool as u32);
+        .unwrap_or((logical_cores * 2).max(10) as u32);
 
     tracing::info!(
         max_pool_size = max_pool_size,
@@ -160,7 +143,9 @@ async fn main() -> Result<()> {
     let pool = PgPoolOptions::new()
         .max_connections(max_pool_size)
         .acquire_timeout(std::time::Duration::from_secs(30))
-        .connect(&database_url)
+        .connect_with(
+            config.database_url.parse::<sqlx::postgres::PgConnectOptions>()?
+        )
         .await?;
 
     // Run migrations (skip if SKIP_MIGRATIONS=true, useful when migrations were applied manually)

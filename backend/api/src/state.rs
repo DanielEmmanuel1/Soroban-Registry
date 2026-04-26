@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
+use crate::SearchClient;
 
 use tokio::sync::broadcast;
 
@@ -87,6 +88,9 @@ impl AppState {
         let contract_events = Arc::new(ContractEventHub::from_env());
         let source_storage = Arc::new(SourceStorage::new().await?);
         let (event_broadcaster, _) = broadcast::channel(100);
+        let elasticsearch_url = std::env::var("ELASTICSEARCH_URL").unwrap_or_else(|_| "http://localhost:9200".to_string());
+        let search = Arc::new(SearchClient::new(&elasticsearch_url).expect("Search client init"));
+
         Ok(Self {
             db,
             started_at: Instant::now(),
