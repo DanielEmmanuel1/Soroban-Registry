@@ -31,11 +31,6 @@ const CATEGORY_OPTIONS_NAMES = [
   'Gaming',
   'Social',
 ];
-const CATEGORY_OPTIONS = CATEGORY_OPTIONS_NAMES.map((cat) => ({
-  value: cat,
-  label: cat,
-  count: 0,
-}));
 const LANGUAGE_OPTIONS = [
   'Rust',
   'TypeScript',
@@ -116,7 +111,13 @@ function getPaginationRange(
   return range;
 }
 
-type ContractsUiFilters = {
+type FilterOption = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+export type ContractsUiFilters = {
   query: string;
   categories: string[];
   languages: string[];
@@ -140,7 +141,10 @@ const EMPTY_CONTRACTS_RESPONSE: ContractsResponse = {
   total_pages: 1,
 };
 
-function getInitialFilters(searchParams: URLSearchParams): ContractsUiFilters {
+const DEFAULT_SORT_BY: SortBy = 'created_at';
+const DEFAULT_SORT_ORDER: ContractsUiFilters['sort_order'] = 'desc';
+
+export function getInitialFilters(searchParams: URLSearchParams): ContractsUiFilters {
   const query = searchParams.get('query') || searchParams.get('q') || '';
   const categories = parseCsvOrMulti(searchParams.getAll('category'));
   const languages = parseCsvOrMulti(searchParams.getAll('language'));
@@ -164,11 +168,50 @@ function getInitialFilters(searchParams: URLSearchParams): ContractsUiFilters {
     author: searchParams.get('author') || '',
     networks,
     verified_only: searchParams.get('verified_only') === 'true',
-    sort_by: validSortBys.includes(sortBy) ? sortBy : (query ? 'relevance' : 'created_at'),
-    sort_order: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc',
+    sort_by: validSortBys.includes(sortBy) ? sortBy : (query ? 'relevance' : DEFAULT_SORT_BY),
+    sort_order: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : DEFAULT_SORT_ORDER,
     page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
     page_size: DEFAULT_PAGE_SIZE,
   };
+}
+
+export function buildContractsApiParams(filters: ContractsUiFilters): ContractSearchParams {
+  return {
+    query: filters.query || undefined,
+    categories: filters.categories.length > 0 ? filters.categories : undefined,
+    languages: filters.languages.length > 0 ? filters.languages : undefined,
+    tags: filters.tags.length > 0 ? filters.tags : undefined,
+    networks:
+      filters.networks.length > 0
+        ? (filters.networks as Array<'mainnet' | 'testnet' | 'futurenet'>)
+        : undefined,
+    author: filters.author || undefined,
+    verified_only: filters.verified_only || undefined,
+    sort_by: filters.sort_by,
+    sort_order: filters.sort_order,
+    page: filters.page,
+    page_size: filters.page_size,
+  };
+}
+
+function getOptionCounts(
+  items: Contract[] | undefined,
+  options: readonly string[],
+  getValue: (contract: Contract) => string | undefined,
+): FilterOption[] {
+  const counts = new Map<string, number>();
+
+  items?.forEach((item) => {
+    const value = getValue(item);
+    if (!value) return;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  });
+
+  return options.map((option) => ({
+    value: option,
+    label: option.charAt(0).toUpperCase() + option.slice(1),
+    count: counts.get(option) ?? 0,
+  }));
 }
 
 export function ContractsContent() {
@@ -187,11 +230,6 @@ export function ContractsContent() {
   const { query, categories, languages, tags, networks, author, verified_only, sort_by, sort_order, page, page_size } = filters;
 
   useEffect(() => {
-    // Skip URL sync if no filters are active
-    const isEmptyFilters = !query && categories.length === 0 && languages.length === 0 && 
-                           tags.length === 0 && networks.length === 0 && !author && !verified_only;
-    if (isEmptyFilters) return;
-
     const params = new URLSearchParams();
     if (query) params.set('query', query);
     categories.forEach((category) => params.append('category', category));
@@ -200,10 +238,10 @@ export function ContractsContent() {
     networks.forEach((network) => params.append('network', network));
     if (author) params.set('author', author);
     if (verified_only) params.set('verified_only', 'true');
-    if (sort_by) params.set('sort_by', sort_by);
-    if (sort_order) params.set('sort_order', sort_order);
+    if (sort_by !== DEFAULT_SORT_BY || query) params.set('sort_by', sort_by);
+    if (sort_order !== DEFAULT_SORT_ORDER) params.set('sort_order', sort_order);
     if (page > 1) params.set('page', String(page));
-    params.set('page_size', String(page_size));
+    if (page_size !== DEFAULT_PAGE_SIZE) params.set('page_size', String(page_size));
 
     const next = params.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
@@ -313,7 +351,7 @@ export function ContractsContent() {
       payload.networks.length > 0 ||
       Boolean(payload.author) ||
       payload.verified_only ||
-      payload.sort_by !== 'created_at' ||
+      payload.sort_by !== DEFAULT_SORT_BY ||
       payload.page > 1;
 
     if (!hasSearchInput) return;
@@ -335,8 +373,8 @@ export function ContractsContent() {
       author: '',
       networks: [],
       verified_only: false,
-      sort_by: 'created_at',
-      sort_order: 'desc',
+      sort_by: DEFAULT_SORT_BY,
+      sort_order: DEFAULT_SORT_ORDER,
       page: 1,
     }));
 
@@ -420,63 +458,69 @@ export function ContractsContent() {
       });
     }
 
-    if (filters.sort_by !== 'created_at' || filters.sort_order !== 'desc') {
+    if (filters.sort_by !== DEFAULT_SORT_BY || filters.sort_order !== DEFAULT_SORT_ORDER) {
       chips.push({
         id: 'sort',
         label: `Sort: ${filters.sort_by.replace('_', ' ')} (${filters.sort_order})`,
-        onRemove: () => setFilters((current) => ({ ...current, sort_by: 'created_at', sort_order: 'desc' })),
+        onRemove: () =>
+          setFilters((current) => ({
+            ...current,
+            sort_by: DEFAULT_SORT_BY,
+            sort_order: DEFAULT_SORT_ORDER,
+            page: 1,
+          })),
       });
     }
 
     return chips;
   }, [filters]);
 
-  const filterPanel = (
-    <FilterPanel
-      categories={CATEGORY_OPTIONS}
-      selectedCategories={filters.categories}
-      onToggleCategory={(value) =>
-        setFilters((current) => ({
-          ...current,
-          categories: toggleOne(current.categories, value),
-          page: 1,
-        }))
-      }
-      onClearCategories={() =>
-        setFilters((current) => ({
-          ...current,
-          categories: [],
-          page: 1,
-        }))
-      }
-      languages={LANGUAGE_OPTIONS}
-      selectedLanguages={filters.languages}
-      onToggleLanguage={(value) =>
-        setFilters((current) => ({
-          ...current,
-          languages: toggleOne(current.languages, value),
-          page: 1,
-        }))
-      }
-      networks={Array.from(ALL_NETWORK_FILTERS)}
-      selectedNetworks={filters.networks}
-      onToggleNetwork={(value) =>
-        setFilters((current) => ({
-          ...current,
-          networks: toggleOne(current.networks, value),
-          page: 1,
-        }))
-      }
-      author={filters.author}
-      onAuthorChange={(value) =>
-        setFilters((current) => ({ ...current, author: value, page: 1 }))
-      }
-      verifiedOnly={filters.verified_only}
-      onVerifiedChange={(value) =>
-        setFilters((current) => ({ ...current, verified_only: value, page: 1 }))
-      }
-    />
-  );
+  const filterPanelProps = {
+    categories: categoryOptions,
+    selectedCategories: filters.categories,
+    onToggleCategory: (value: string) =>
+      setFilters((current) => ({
+        ...current,
+        categories: toggleOne(current.categories, value),
+        page: 1,
+      })),
+    onClearCategories: () =>
+      setFilters((current) => ({
+        ...current,
+        categories: [],
+        page: 1,
+      })),
+    languages: LANGUAGE_OPTIONS,
+    selectedLanguages: filters.languages,
+    onToggleLanguage: (value: string) =>
+      setFilters((current) => ({
+        ...current,
+        languages: toggleOne(current.languages, value),
+        page: 1,
+      })),
+    networks: networkOptions,
+    selectedNetworks: filters.networks,
+    onToggleNetwork: (value: string) =>
+      setFilters((current) => ({
+        ...current,
+        networks: toggleOne(current.networks, value as ContractsUiFilters['networks'][number]),
+        page: 1,
+      })),
+    onClearNetworks: () =>
+      setFilters((current) => ({
+        ...current,
+        networks: [],
+        page: 1,
+      })),
+    author: filters.author,
+    onAuthorChange: (value: string) =>
+      setFilters((current) => ({ ...current, author: value, page: 1 })),
+    verifiedOnly: filters.verified_only,
+    onVerifiedChange: (value: boolean) =>
+      setFilters((current) => ({ ...current, verified_only: value, page: 1 })),
+    activeFilterCount: activeFilterChips.length,
+    onResetAll: clearAllFilters,
+  };
 
   return (
     <>
@@ -611,7 +655,7 @@ export function ContractsContent() {
               </div>
               
               <>
-                {filterPanel}
+                <FilterPanel {...filterPanelProps} />
                 <div className="mt-5 pt-4 border-t border-border">
                   <div className="w-full">
                     <TagAutocomplete
@@ -712,7 +756,10 @@ export function ContractsContent() {
                     <button
                       type="button"
                       onClick={() =>
-                        setFilters((current) => ({ ...current, page: current.page + 1 }))
+                        setFilters((current) => ({
+                          ...current,
+                          page: Math.min(effectiveData.total_pages, current.page + 1),
+                        }))
                       }
                       disabled={filters.page >= effectiveData.total_pages}
                       className="px-4 py-2 rounded-lg border border-border text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent transition-colors text-sm font-medium"
@@ -723,24 +770,17 @@ export function ContractsContent() {
                 )}
               </>
             ) : (
-              <div className="text-center py-20 gradient-border-card">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
-                  <Package className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No contracts found</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  No contracts match the current filters. Try adjusting your search or clearing filters.
+              <div className="text-center py-16 bg-card/50 border border-border rounded-xl">
+                <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No contracts found</h3>
+                <p className="text-muted-foreground max-w-md mx-auto mb-6 text-sm">
+                  We couldn't find any contracts matching your current filters. Try adjusting your
+                  search or clearing some filters.
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    logEvent('search_performed', {
-                      keyword: '',
-                      action: 'clear_all_filters',
-                    });
-                    clearAllFilters();
-                  }}
-                  className="btn-glow px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium"
+                  onClick={clearAllFilters}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm font-medium"
                 >
                   Clear all filters
                 </button>
@@ -750,49 +790,58 @@ export function ContractsContent() {
         </div>
       </div>
 
-      {/* Mobile Filters Drawer */}
       {mobileFiltersOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
-          <div className="absolute right-0 top-0 h-full w-[88%] max-w-sm bg-background border-l border-border p-5 shadow-2xl animate-in slide-in-from-right duration-300 overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-primary" />
-                <h2 className="text-lg font-semibold">Filters</h2>
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            aria-label="Close filters"
+            onClick={() => setMobileFiltersOpen(false)}
+            className="absolute inset-0 bg-black/50"
+          />
+          <div className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-background shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border px-4 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Filters</h2>
+                <p className="text-xs text-muted-foreground">Narrow down contract discovery</p>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                aria-label="Close filters"
+                className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                <X className="w-5 h-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
-            {filterPanel}
 
-            <div className="mt-5 pt-4 border-t border-border">
-              <TagAutocomplete
-                onSelect={(tag) =>
-                  setFilters((current) => {
-                    if (current.tags.includes(tag.name)) return current;
-                    return {
-                      ...current,
-                      tags: [...current.tags, tag.name],
-                      page: 1,
-                    };
-                  })
-                }
-                placeholder="Filter by tag..."
-              />
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <FilterPanel {...filterPanelProps} />
+
+              <div className="mt-5 border-t border-border pt-4">
+                <TagAutocomplete
+                  onSelect={(tag) =>
+                    setFilters((current) => {
+                      if (current.tags.includes(tag.name)) return current;
+                      return {
+                        ...current,
+                        tags: [...current.tags, tag.name],
+                        page: 1,
+                      };
+                    })
+                  }
+                  placeholder="Filter by tag..."
+                />
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(false)}
-              className="mt-8 w-full px-4 py-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium btn-glow"
-            >
-              Show results
-            </button>
+            <div className="border-t border-border px-4 py-4">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+              >
+                Apply filters
+              </button>
+            </div>
           </div>
         </div>
       )}
