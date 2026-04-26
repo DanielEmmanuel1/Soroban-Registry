@@ -265,7 +265,7 @@ impl IndexerService {
 
                     // Detect contract deployments
                     let deployments =
-                        detector::detect_contract_deployments(&operations, ledger_height);
+                        detector::detect_contract_deployments(&operations, ledger_height, &ledger.timestamp);
 
                     if !deployments.is_empty() {
                         info!(

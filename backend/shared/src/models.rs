@@ -55,6 +55,7 @@ pub struct Contract {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub verified_at: Option<DateTime<Utc>>,
+    pub deployed_at: Option<DateTime<Utc>>,
     /// Who verified the contract (publisher/user id)
     pub verified_by: Option<Uuid>,
     /// Optional notes attached to the verification
