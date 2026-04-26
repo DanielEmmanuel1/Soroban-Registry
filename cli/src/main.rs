@@ -24,6 +24,7 @@ mod io_utils;
 mod manifest;
 mod migration;
 mod multisig;
+mod net;
 mod network;
 mod package_signing;
 mod patch;
