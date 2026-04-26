@@ -5,6 +5,7 @@ import { ReactNode, useState } from 'react';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import ToastProvider from '@/providers/ToastProvider';
 import RealtimeProvider from '@/providers/RealtimeProvider';
+import FavoritesProvider from '@/providers/FavoritesProvider';
 import ErrorBoundary from './ErrorBoundary';
 import { CookiesProvider } from 'react-cookie';
 

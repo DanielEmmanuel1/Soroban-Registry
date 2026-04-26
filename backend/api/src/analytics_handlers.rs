@@ -793,8 +793,6 @@ pub async fn get_analytics_timeseries(
 }
 
 // ── Unit tests ────────────────────────────────────────────────────────────────
-
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -836,4 +834,191 @@ mod tests {
         let avg = total_interactions as f64 / contract_count as f64;
         assert_eq!(avg, 25.0);
     }
+}
+
+// ── Dashboard endpoint ────────────────────────────────────────────────────────
+
+/// Query parameters for the dashboard endpoint.
+#[derive(Debug, Deserialize)]
+pub struct DashboardParams {
+    /// Number of recent additions to return (default: 10, max: 50).
+    pub limit: Option<i64>,
+}
+
+/// One entry in the network_usage array returned by the dashboard endpoint.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct NetworkUsageEntry {
+    pub network: String,
+    pub count: i64,
+}
+
+/// One entry in the category_distribution array returned by the dashboard endpoint.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct CategoryDistributionEntry {
+    pub category: String,
+    pub count: i64,
+}
+
+/// One entry in the deployment_trends array returned by the dashboard endpoint.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct DeploymentTrendEntry {
+    pub date: NaiveDate,
+    pub count: i64,
+}
+
+/// One entry in the recent_additions array returned by the dashboard endpoint.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct RecentAdditionEntry {
+    pub id: Uuid,
+    pub contract_id: String,
+    pub name: String,
+    pub network: String,
+    pub category: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Response shape for GET /api/analytics/dashboard.
+///
+/// This is the exact shape consumed by the frontend analytics page at /analytics.
+/// Fields:
+/// - `recent_additions` → `RecentAdditionsTimeline` and `DeploymentTimeline` components
+/// - `network_usage`    → `NetworkUsageStats` component  (expects `[{network, count}]`)
+/// - `category_distribution` → `CategoryDistributionPie` (expects `[{category, count}]`)
+/// - `deployment_trends`     → `DeploymentTrendGraph`    (expects `[{date, count}]`)
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct AnalyticsDashboardResponse {
+    pub recent_additions: Vec<RecentAdditionEntry>,
+    pub network_usage: Vec<NetworkUsageEntry>,
+    pub category_distribution: Vec<CategoryDistributionEntry>,
+    pub deployment_trends: Vec<DeploymentTrendEntry>,
+}
+
+/// Return the analytics dashboard data consumed by the frontend /analytics page.
+///
+/// This endpoint is registered at GET /api/analytics/dashboard and returns the
+/// exact response shape the frontend expects.  All four data sets are fetched
+/// in parallel-friendly sequential queries that use existing indexes.
+#[utoipa::path(
+    get,
+    path = "/api/analytics/dashboard",
+    params(
+        ("limit" = Option<i64>, Query, description = "Number of recent additions (default 10, max 50)")
+    ),
+    responses(
+        (status = 200, description = "Analytics dashboard data", body = AnalyticsDashboardResponse)
+    ),
+    tag = "Analytics"
+)]
+pub async fn get_analytics_dashboard(
+    State(state): State<AppState>,
+    Query(params): Query<DashboardParams>,
+) -> ApiResult<Json<AnalyticsDashboardResponse>> {
+    let limit = params.limit.unwrap_or(10).clamp(1, 50);
+
+    // ── Recent additions (newest contracts first) ─────────────────────────────
+    let recent_rows: Vec<(Uuid, String, String, String, Option<String>, chrono::DateTime<chrono::Utc>)> =
+        sqlx::query_as(
+            r#"
+            SELECT id, contract_id, name, network::TEXT, category, created_at
+            FROM   contracts
+            ORDER  BY created_at DESC
+            LIMIT  $1
+            "#,
+        )
+        .bind(limit)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|err| db_err("fetch recent additions", err))?;
+
+    let recent_additions: Vec<RecentAdditionEntry> = recent_rows
+        .into_iter()
+        .map(|(id, contract_id, name, network, category, created_at)| RecentAdditionEntry {
+            id,
+            contract_id,
+            name,
+            network,
+            category,
+            created_at,
+        })
+        .collect();
+
+    // ── Network usage (contract counts per network) ───────────────────────────
+    let network_rows: Vec<(String, i64)> = sqlx::query_as(
+        r#"
+        SELECT network::TEXT, COUNT(*)::BIGINT AS count
+        FROM   contracts
+        GROUP  BY network
+        ORDER  BY count DESC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|err| db_err("fetch network usage", err))?;
+
+    let network_usage: Vec<NetworkUsageEntry> = network_rows
+        .into_iter()
+        .map(|(network, count)| NetworkUsageEntry { network, count })
+        .collect();
+
+    // ── Category distribution (top 10 categories by contract count) ───────────
+    let category_rows: Vec<(Option<String>, i64)> = sqlx::query_as(
+        r#"
+        SELECT COALESCE(category, 'Uncategorized') AS category,
+               COUNT(*)::BIGINT AS count
+        FROM   contracts
+        GROUP  BY category
+        ORDER  BY count DESC
+        LIMIT  10
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|err| db_err("fetch category distribution", err))?;
+
+    let category_distribution: Vec<CategoryDistributionEntry> = category_rows
+        .into_iter()
+        .map(|(category, count)| CategoryDistributionEntry {
+            category: category.unwrap_or_else(|| "Uncategorized".to_string()),
+            count,
+        })
+        .collect();
+
+    // ── Deployment trends (daily deploy counts for last 30 days) ─────────────
+    // Uses the daily-aggregate rollup for 'deploy' interactions so the query
+    // is fast even on large registries.  generate_series fills in zero-count
+    // days so the chart always has a continuous 30-day series.
+    let thirty_days_ago = chrono::Utc::now() - chrono::Duration::days(30);
+
+    let trend_rows: Vec<(NaiveDate, i64)> = sqlx::query_as(
+        r#"
+        SELECT d::DATE AS date,
+               COALESCE(SUM(agg.count), 0)::BIGINT AS count
+        FROM   generate_series(
+                   ($1::TIMESTAMPTZ)::DATE,
+                   CURRENT_DATE,
+                   '1 day'::INTERVAL
+               ) d
+        LEFT   JOIN contract_interaction_daily_aggregates agg
+               ON  agg.day = d::DATE
+               AND agg.interaction_type = 'deploy'
+        GROUP  BY d::DATE
+        ORDER  BY d::DATE
+        "#,
+    )
+    .bind(thirty_days_ago)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|err| db_err("fetch deployment trends", err))?;
+
+    let deployment_trends: Vec<DeploymentTrendEntry> = trend_rows
+        .into_iter()
+        .map(|(date, count)| DeploymentTrendEntry { date, count })
+        .collect();
+
+    Ok(Json(AnalyticsDashboardResponse {
+        recent_additions,
+        network_usage,
+        category_distribution,
+        deployment_trends,
+    }))
 }

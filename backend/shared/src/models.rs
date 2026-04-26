@@ -55,6 +55,7 @@ pub struct Contract {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub verified_at: Option<DateTime<Utc>>,
+    pub deployed_at: Option<DateTime<Utc>>,
     /// Who verified the contract (publisher/user id)
     pub verified_by: Option<Uuid>,
     /// Optional notes attached to the verification
@@ -155,6 +156,24 @@ pub struct NetworkInfo {
 pub struct NetworkListResponse {
     pub networks: Vec<NetworkInfo>,
     pub cached_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct NetworkHealth {
+    pub network_id: String,
+    pub name: String,
+    pub status: NetworkStatus,
+    pub rpc_available: bool,
+    pub last_indexed_ledger: Option<i64>,
+    pub current_ledger: Option<u32>,
+    pub indexer_lag: Option<i64>,
+    pub last_checked_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct NetworkHealthResponse {
+    pub health: Vec<NetworkHealth>,
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Network where the contract is deployed
@@ -2400,6 +2419,9 @@ pub struct ActivityFeedParams {
 
     /// Optionally filter by event type.
     pub event_type: Option<AnalyticsEventType>,
+
+    /// Optionally filter by contract ID.
+    pub contract_id: Option<Uuid>,
 }
 
 fn default_activity_limit() -> i64 {
@@ -4068,7 +4090,7 @@ pub struct UserSubscriptionsResponse {
 }
 
 /// Summary of a contract subscription
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ContractSubscriptionSummary {
     pub id: Uuid,
     pub contract_id: Uuid,
